@@ -1,7 +1,8 @@
 .. _`sec:stackwalk-intro`:
 
-Stackwalk Introduction
-======================
+=========
+Stackwalk
+=========
 
 This document describes StackwalkerAPI, an API and library for walking a
 call stack. The call stack (also known as the run-time stack) is a stack
@@ -93,8 +94,8 @@ Look up symbolic names
 
 .. _`sec:stackwalk-abstractions`:
 
-Stackwalk Abstractions
-======================
+Abstractions
+============
 
 StackwalkerAPI contains two interfaces: the Stackwalking Interface and
 the Callback Interface. The stackwalking interface is used to walk the
@@ -184,8 +185,8 @@ SymbolLookup
 
 .. _`sec:stackwalk-api`:
 
-Stackwalk API Reference
-=======================
+API Reference
+=============
 
 This section describes the StackwalkerAPI interface. It is divided into
 three sub-sections: a description of the definitions and basic types
