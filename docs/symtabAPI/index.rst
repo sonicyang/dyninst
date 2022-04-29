@@ -1,7 +1,8 @@
 .. _`sec:symtab-intro`:
 
-Symtab API Introduction
-=======================
+=========
+SymtabAPI
+=========
 
 SymtabAPI is a multi-platform library for parsing symbol tables, object
 file headers and debug information. SymtabAPI currently supports the ELF
@@ -44,12 +45,8 @@ or adding new local variables to certain functions.
 
 .. _`sec:symtab-abstractions`:
 
-Symtab Abstractions
-===================
-
-= [rectangle, draw, fill=green!25] = [rectangle, draw, rounded corners,
-fill=yellow!25] = [ellipse, draw, fill=red!25] = [trapezium, trapezium
-left angle=70, trapezium right angle=70, draw, fill=cyan!25] = []
+Abstractions
+============
 
 SymtabAPI provides a simple set of abstractions over complicated data
 structures which makes it straight-forward to use. The SymtabAPI
@@ -178,8 +175,8 @@ useful because libraries can load at different addresses in different
 processes. Each AddressLookup instance is associated with, and provides
 mapping for, one process.
 
-Simple Examples
-===============
+Examples
+========
 
 To illustrate the ideas in the API, this section presents several short
 examples that demonstrate how the API can be used. SymtabAPI has the
@@ -3345,7 +3342,7 @@ file, but it will be available for further queries.
 This method returns ``true`` if the typedef type is compatible with the
 given type ``type`` or else returns ``false``.
 
-Class typeRef 
+Class typeRef
 ~~~~~~~~~~~~~
 
 |  

@@ -42,11 +42,4 @@ Resources
    parseAPI/index
    patchAPI/index
    stackwalk/index
-    
-.. toctree::
-    :caption: Symtab API
-    :name: symtabAPI
-    :hidden:
-    :maxdepth: 3
-
-    symtabAPI/index.rst
+   symtabAPI/index
