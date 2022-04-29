@@ -30,8 +30,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.napoleon",
     "sphinxarg.ext",
-    "myst_parser",
-    "sphinx.ext.autosectionlabel",
+    "myst_parser"
 ]
 
 # Snakmake theme (made by SciAni).
