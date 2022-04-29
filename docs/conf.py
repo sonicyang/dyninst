@@ -15,9 +15,6 @@
 
 import sys
 import os
-from recommonmark.parser import CommonMarkParser
-
-source_parsers = {".md": CommonMarkParser}
 
 # -- General configuration ------------------------------------------------
 
@@ -33,6 +30,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.napoleon",
     "sphinxarg.ext",
+    "myst_parser",
     "sphinx.ext.autosectionlabel",
 ]
 
