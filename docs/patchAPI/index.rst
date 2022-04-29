@@ -1,7 +1,8 @@
 .. _sec-patchapi-intro:
 
-Introduction
-============
+========
+PatchAPI
+========
 
 This manual describes PatchAPI, a programming interface and library for
 binary code patching. A programmer uses PatchAPI to instrument (insert
@@ -60,10 +61,10 @@ Section `4 <#sec-public-api>`__ and Section `6 <#sec-plugin-api>`__.
 Finally, Appendix `7 <#sec-dyn>`__ provides a quick tutorial of PatchAPI
 to those who are already familiar with DyninstAPI.
 
-.. _sec-parseapi-abs:
+.. _sec-parseapi-abstractions:
 
-Patch API Abstractions
-======================
+Abstractions
+============
 
 .. figure:: ./figure/abstraction/img.pdf
    :alt: Object Ownership
@@ -92,8 +93,6 @@ contains more than one instances of a Point object.
 The remainder of this section briefly describes the classes that make up
 PatchAPI’s two interfaces. For more details, see the class descriptions
 in Section `4 <#sec-public-api>`__ and Section `6 <#sec-plugin-api>`__.
-
-.. _sec-2.1:
 
 Public Interface
 ----------------
@@ -137,8 +136,6 @@ binary code patching: 1) find some **Point**; 2) insert or delete
    collection of instances of class PatchLoop contained in a function.
    The structure of the tree follows the nesting relationship of the
    loops in a function.
-
-.. _sec-2.2:
 
 Plugin Interface
 ----------------
@@ -223,8 +220,8 @@ PatchAPI for 1st party code patching.
 
 .. _sec-example:
 
-Patch API Examples
-==================
+Examples
+========
 
 To illustrate the ideas of PatchAPI, we present some simple code
 examples that demonstrate how the API can be used.
@@ -473,8 +470,8 @@ Finally, a snippet of custom snippet representation MySnippet is created
 
 .. _sec-public-api:
 
-Public API Reference
-====================
+API Reference
+=============
 
 This section describes public interfaces in PatchAPI. The API is
 organized as a collection of C++ classes. The classes in PatchAPI fall
@@ -1909,8 +1906,7 @@ all Commands will succeed, or all will fail.
 .. code-block:: cpp
     
     typedef std::list<CommandPtr> CommandList;
-
-CommandList to_do_; CommandList done_;
+    CommandList to_do_; CommandList done_;
 
 This class has two protected members *to_do\_* and *done\_*, where
 *to_do\_* is a list of Commands to execute, and *done\_* is a list of
@@ -1948,7 +1944,7 @@ The Instrumenter class inherits BatchCommand to encapsulate the core
 code patching logic, which includes binary code generation. Instrumenter
 would contain several logical steps that are individual Commands.
 
-CommandList user_commands_;
+    ``CommandList user_commands_;``
 
 This class has a protected data member *user_commands\_* that contains
 all Commands issued by users, e.g., snippet insertion. This is to
@@ -2117,8 +2113,6 @@ Performs the same logic as BatchCommand::run(), except that this
 function implicitly adds an internal Command – Instrumenter, which is
 executed after all other Commands in the *to_do\_*.
 
-.. _sec-3.2.12:
-
 CFGMaker
 --------
 
@@ -2147,8 +2141,6 @@ and then use this class to instantiate these CFG structures.
 Programmers implement the above virtual methods to instantiate a CFG
 structure (either a PatchFunction, a PatchBlock, or a PatchEdge) or to
 copy (e.g., when forking a new process).
-
-.. _sec-3.2.13:
 
 PointMaker
 ----------

@@ -40,14 +40,7 @@ Resources
    dynC_API/index
    instructionAPI/index
    parseAPI/index
-
-.. toctree::
-    :caption: Patch API
-    :name: patchAPI
-    :hidden:
-    :maxdepth: 3
-
-    patchAPI/index.rst
+   patchAPI/index
     
 .. toctree::
     :caption: Stackwalk
