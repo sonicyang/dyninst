@@ -31,10 +31,10 @@ Resources
 
 
 .. toctree::
-   :caption: The Dataflow API 
-   :name: dataflowAPI
+   :caption: toolkits 
+   :name: toolkits
    :hidden:
-   :maxdepth: 3
+   :maxdepth: 2
 
    dataflowAPI/index
 
