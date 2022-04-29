@@ -37,14 +37,7 @@ Resources
    :maxdepth: 2
 
    dataflowAPI/index
-
-.. toctree::
-    :caption: dynC API
-    :name: dynC_API
-    :hidden:
-    :maxdepth: 3
-
-    dynC_API/index.rst
+   dynC_API/index
     
 .. toctree::
     :caption: Instruction API
