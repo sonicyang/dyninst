@@ -1,7 +1,8 @@
 .. _`sec:parseapi-intro`:
 
-Introduction to Parse API
-=========================
+========
+ParseAPI
+========
 
 A binary code parser converts the machine code representation of a
 program, library, or code snippet to abstractions such as the
@@ -34,8 +35,8 @@ during parallel parsing, please set environment variable
 
 .. _`sec:parseapi-abstractions`:
 
-Parse API Abstractions
-======================
+Abstractions
+============
 
 The basic representation of code in this API is the control flow graph
 (CFG). Binary code objects are represented as regions of contiguous
@@ -102,8 +103,8 @@ binary code:
 
 .. _`sec:example`:
 
-Parse API Examples
-==================
+Examples
+========
 
 Function Disassembly
 --------------------
@@ -344,8 +345,8 @@ ParseAPI once we have an parsed Function object.
 
 .. _`sec:api`:
 
-The Parsing API
-===============
+API Reference
+=============
 
 Class CodeObject
 ----------------

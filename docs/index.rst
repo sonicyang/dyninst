@@ -39,15 +39,8 @@ Resources
    dataflowAPI/index
    dynC_API/index
    instructionAPI/index
-    
-.. toctree::
-    :caption: Parse API
-    :name: parseAPI
-    :hidden:
-    :maxdepth: 3
+   parseAPI/index
 
-    parseAPI/index.rst
-    
 .. toctree::
     :caption: Patch API
     :name: patchAPI
