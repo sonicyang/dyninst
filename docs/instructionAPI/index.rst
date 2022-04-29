@@ -1,7 +1,8 @@
 .. _`sec:instruction-intro`:
 
-Instruction API Introduction
-============================
+==============
+InstructionAPI
+==============
 
 When analyzing and modifying binary code, it is necessary to translate
 between raw binary instructions and an abstract form that describes the
@@ -38,8 +39,10 @@ trees, we make it possible to analyze the operands in a uniform manner,
 regardless of the complexity involved in the operand’s actual
 computation.
 
-InstructionAPI Modules and Abstractions
-=======================================
+.. _`sec:instruction-abstractions`:
+
+Abstractions
+============
 
 The Instruction API contains three major components: the top-level
 instruction representation, the abstract syntax trees representing the
@@ -177,8 +180,10 @@ memory values into an operand, regardless of whether those values are
 known at the time an instruction is decoded. More details on this
 mechanism may be found in Section `3.5 <#sec:expression>`__.
 
-InstructionAPI Class Reference
-==============================
+.. _`sec:instruction-api`:
+
+API Reference
+=============
 
 .. _`sec:instruction`:
 
