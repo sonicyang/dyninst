@@ -218,10 +218,10 @@ PatchAPI for 1st party code patching.
    Furthermore, Patcher implicitly adds Instrumenter to the end of the
    Command list to generate binary code and install the instrumentation.
 
-.. _sec-example:
+.. _sec-patchapi-usage:
 
-Examples
-========
+Usage
+=====
 
 To illustrate the ideas of PatchAPI, we present some simple code
 examples that demonstrate how the API can be used.

@@ -101,10 +101,10 @@ binary code:
    provides a SymtabAPI-based code source that understands ELF, COFF and
    PE file formats.
 
-.. _`sec:example`:
+.. _`sec:parseapi-usage`:
 
-Examples
-========
+Usage
+=====
 
 Function Disassembly
 --------------------

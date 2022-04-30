@@ -75,10 +75,10 @@ Stack Height
    Stack Height represents the difference between a value in an abstract
    location and the stack pointer at a function’s call site.
 
-.. _`sec:dataflow-examples`:
+.. _`sec:dataflow-usage`:
 
-Examples
-========
+Usage
+=====
 
 We show several examples of how to use DataflowAPI. In these examples,
 we assume that the mutatee has been parsed and we have function and

@@ -175,8 +175,10 @@ useful because libraries can load at different addresses in different
 processes. Each AddressLookup instance is associated with, and provides
 mapping for, one process.
 
-Examples
-========
+.. _symtabapi-usage:
+
+Usage
+=====
 
 To illustrate the ideas in the API, this section presents several short
 examples that demonstrate how the API can be used. SymtabAPI has the
