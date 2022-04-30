@@ -37,9 +37,16 @@ Resources
    :maxdepth: 2
 
    dataflowAPI/index
-   dynC_API/index
    instructionAPI/index
    parseAPI/index
    patchAPI/index
    stackwalk/index
    symtabAPI/index
+
+.. toctree::
+   :caption: user tools
+   :name: usertools
+   :hidden:
+   :maxdepth: 3
+   
+   usertools/dynC_API/index
