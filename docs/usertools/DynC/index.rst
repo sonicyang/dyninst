@@ -1,8 +1,8 @@
 .. _`sec:dyncapi-intro`:
 
-========
-DynC API
-========
+====
+DynC
+====
 
 Dyninst is a powerful instrumentation tool, but specifying
 instrumentation code (known as an Abstract Syntax Tree) in the

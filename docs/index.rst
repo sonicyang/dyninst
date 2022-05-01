@@ -49,7 +49,7 @@ Resources
    :hidden:
    :maxdepth: 3
    
-   usertools/dynC_API/index
+   usertools/DynC/index
 
 .. toctree::
    :caption: developer apis
