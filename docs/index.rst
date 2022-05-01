@@ -77,7 +77,7 @@ Developed by
    :hidden:
    :maxdepth: 1
 
-   overview   
+   overview
    building
 
 .. toctree::
@@ -91,6 +91,7 @@ Developed by
    instructionAPI/index
    parseAPI/index
    patchAPI/index
+   proccontrolAPI/index
    stackwalk/index
    symtabAPI/index
 
@@ -113,5 +114,6 @@ Developed by
    instructionAPI/API
    parseAPI/API
    patchAPI/API
+   proccontrolAPI/API
    stackwalk/API
    symtabAPI/API
