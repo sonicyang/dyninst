@@ -87,6 +87,7 @@ Developed by
    :maxdepth: 2
 
    dataflowAPI/index
+   dyninstAPI/index
    instructionAPI/index
    parseAPI/index
    patchAPI/index
@@ -108,6 +109,7 @@ Developed by
    :maxdepth: 2
    
    dataflowAPI/API
+   dyninstAPI/API
    instructionAPI/API
    parseAPI/API
    patchAPI/API
