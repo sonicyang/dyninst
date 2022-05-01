@@ -61,7 +61,8 @@ Resources
    :name: basics
    :hidden:
    :maxdepth: 1
-   
+
+   overview   
    building
 
 .. toctree::
