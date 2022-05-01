@@ -56,6 +56,21 @@ Resources
 `GitHub Repository <https://github.com/dyninst/dyninst>`_
     The code on GitHub.
 
+------------
+Developed by
+------------
+
+|     Paradyn Parallel Performance Tools
+
+|     Computer Science Department
+|     University of Wisconsin-Madison
+|     Madison, WI 53706
+
+|     Computer Science Department
+|     University of Maryland
+|     College Park, MD 20742
+
+
 .. toctree::
    :caption: getting started
    :name: basics
