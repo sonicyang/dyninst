@@ -10,7 +10,7 @@ Dyninst
 
 .. epigraph::
 
-   Dyninst is part of the `Paradyn <http://www.paradyn.org>`_ Project.
+   *Part of the* `Paradyn <http://www.paradyn.org>`_ *project*
 
 
 Dyninst is a collection of libraries for performing binary instrumentation, analysis, and
