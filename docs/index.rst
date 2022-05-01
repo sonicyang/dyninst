@@ -29,6 +29,13 @@ Resources
 `GitHub Repository <https://github.com/dyninst/dyninst>`_
     The code on GitHub.
 
+.. toctree::
+   :caption: getting started
+   :name: basics
+   :hidden:
+   :maxdepth: 1
+   
+   building
 
 .. toctree::
    :caption: toolkits 
