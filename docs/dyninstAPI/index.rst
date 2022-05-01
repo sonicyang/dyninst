@@ -1,3 +1,5 @@
+.. _sec:dyninstapi-intro:
+
 ==========
 DyninstAPI
 ==========
@@ -44,7 +46,12 @@ The goal of this API is to keep the interface small and easy to
 understand. At the same time, it needs to be sufficiently expressive to
 be useful for a variety of applications. We accomplished this goal by
 providing a simple set of abstractions and a way to specify which code
-to insert into the application [1]_.
+to insert into the application.
+
+.. note::
+   To generate more complex code, extra (initially un-called) subroutines can be
+   linked into the application program, and calls to these subroutines can be
+   inserted at runtime via this interface.
 
 Abstractions
 ============
@@ -107,20 +114,13 @@ function is only executed in the context of that function, even if
 instrumentation is inserted into a location that exists in multiple
 functions.
 
-Examples
-========
+Usage
+=====
 
-To illustrate the ideas of the API, we present several short examples
-that demonstrate how the API can be used. The full details of the
-interface are presented in the next section. To prevent confusion, we
-refer to the application process or binary that is being modified as the
+We refer to the application process or binary that is being modified as the
 mutatee, and the program that uses the API to modify the application as
 the mutator. The mutator is a separate process from the application
 process.
-
-The examples in this section are simple code snippets, not complete
-programs. Appendix A - Complete Examples provides several examples of
-complete Dyninst programs.
 
 Instrumenting a function
 ------------------------
@@ -144,7 +144,9 @@ the process is already in execution, this can be done by specifying the
 executable file name and process id of the application as arguments in
 order to create an instance of a process object:
 
-BPatch_process \*appProc = bpatch.processAttach(name, processId);
+.. code-block:: cpp
+
+   BPatch_process *appProc = bpatch.processAttach(name, processId);
 
 This creates a new instance of the BPatch_process class that refers to
 the existing process. It had no effect on the state of the process
@@ -152,12 +154,16 @@ the existing process. It had no effect on the state of the process
 mutator specifies the pathname and argument list of a program it seeks
 to execute:
 
-BPatch_process \*appProc = bpatch.processCreate(pathname, argv);
+.. code-block:: cpp
+
+   BPatch_process *appProc = bpatch.processCreate(pathname, argv);
 
 If the mutator is opening a file for static binary rewriting, it
 executes:
 
-BPatch_binaryEdit \*appBin = bpatch.openBinary(pathname);
+.. code-block:: cpp
+
+   BPatch_binaryEdit *appBin = bpatch.openBinary(pathname);
 
 The above statements create either a BPatch_process object or
 BPatch_binaryEdit object, depending on whether Dyninst is doing dynamic
@@ -167,22 +173,29 @@ BPatch_addressSpace object. Both BPatch_process and BPatch_binaryEdit
 inherit from BPatch_addressSpace, so we can use cast operations to move
 between the two:
 
-BPatch_process \*appProc = static_cast<BPatch_process \*>(appAddrSpace)
+.. code-block:: cpp
 
--or-
+   BPatch_process *appProc = static_cast<BPatch_process *>(appAddrSpace)
 
-BPatch_binaryEdit \*appBin = static_cast<BPatch_binaryEdit
-\*>(appAddrSpace)
+or
+
+.. code-block:: cpp
+
+   BPatch_binaryEdit *appBin = static_cast<BPatch_binaryEdit*>(appAddrSpace)
 
 Similarly, all instrumentation commands can be performed on a
 BPatch_addressSpace object, allowing similar codes to be used between
 dynamic instrumentation and binary rewriting:
 
-BPatch_addressSpace \*app = appProc;
+.. code-block:: cpp
 
--or-
+   BPatch_addressSpace *app = appProc;
 
-BPatch_addressSpace \*app = appBin;
+or
+
+.. code-block:: cpp
+
+   BPatch_addressSpace *app = appBin;
 
 Once the address space has been created, the mutator defines the snippet
 of code to be inserted and identifies where the points should be
@@ -193,51 +206,52 @@ InterestingProcedure, it should get a BPatch_function from the
 application’s BPatch_image, and get the entry BPatch_point from that
 function:
 
-std::vector<BPatch_function \*> functions;
+.. code-block:: cpp
 
-std::vector<BPatch_point \*> \*points;
+   std::vector<BPatch_function *> functions;
+   std::vector<BPatch_point *> *points;
 
-BPatch_image \*appImage = app->getImage();
-
-appImage->findFunction(“InterestingProcedure”, functions);
-
-points = functions[0]->findPoint(BPatch_locEntry);
+   BPatch_image *appImage = app->getImage();
+   appImage->findFunction("InterestingProcedure", functions);
+   points = functions[0]->findPoint(BPatch_locEntry);
 
 The mutator also needs to construct the instrumentation that it will
 insert at the BPatch_point. It can do this by allocating an integer in
 the application to store instrumentation results, and then creating a
 BPatch_snippet to increment that integer:
 
-BPatch_variableExpr \*intCounter =
+.. code-block:: cpp
 
-   app->malloc(*(appImage->findType("int")));
-
-BPatch_arithExpr addOne(BPatch_assign, \*intCounter,
-
-BPatch_arithExpr(BPatch_plus, \*intCounter, BPatch_constExpr(1)));
+   BPatch_variableExpr *intCounter = app->malloc(*(appImage->findType("int")));
+   BPatch_arithExpr addOne(
+         BPatch_assign, *intCounter,
+         BPatch_arithExpr(BPatch_plus, *intCounter, BPatch_constExpr(1)));
 
 The mutator can set the BPatch_snippet to be run at the BPatch_point by
 executing an insert­Snippet call:
 
-app->insertSnippet(addOne, \*points);
+.. code-block:: cpp
+
+   app->insertSnippet(addOne, *points);
 
 Finally, the mutator should either continue the mutate process and wait
 for it to finish, or write the resulting binary onto the disk, depending
 on whether it is doing dynamic or static instrumentation:
 
-appProc->continueExecution();
+.. code-block:: cpp
 
-while (!appProc->isTerminated()) {
+   appProc->continueExecution();
 
-bpatch.waitForStatusChange();
+   while (!appProc->isTerminated()) {
+      bpatch.waitForStatusChange();
+   }
 
-}
+or
 
--or-
+.. code-block:: cpp
 
-appBin->writeFile(newPath);
+   appBin->writeFile(newPath);
 
-A complete example can be found in Appendix A - Complete Examples.
 
 Binary Analysis
 ---------------
@@ -257,19 +271,20 @@ details of which can be found in the InstructionAPI Reference Manual.
 Similar to the above example, the mutator will start by creating a
 BPatch object and opening a file to operate on:
 
-BPatch bpatch;
+.. code-block:: cpp
 
-BPatch_binaryEdit \*binedit = bpatch.openFile(pathname);
+   BPatch bpatch;
+   BPatch_binaryEdit *binedit = bpatch.openFile(pathname);
 
 The mutator needs to get a handle to a function to do analysis on. This
 example will look up a function by name; alternatively, it could have
 iterated over every function in BPatch_image or BPatch_module:
 
-BPatch_image \*appImage = binedit->getImage();
+.. code-block:: cpp
 
-std::vector<BPatch_function \*> funcs;
-
-image->findFunction(“InterestingProcedure”, funcs);
+   BPatch_image *appImage = binedit->getImage();
+   std::vector<BPatch_function *> funcs;
+   image->findFunction("InterestingProcedure", funcs);
 
 A function’s control flow graph is represented by the BPatch_flowGraph
 class. The BPatch_flowGraph contains, among other things, a set of
@@ -277,28 +292,24 @@ BPatch_basicBlock objects connected by BPatch_edge objects. This example
 will simply collect a list of the basic blocks in BPatch_flowGraph and
 iterate over each one:
 
-BPatch_flowGraph \*fg = funcs[0]->getCFG();
+.. code-block:: cpp
 
-std::set<BPatch_basicBlock \*> blocks;
+   BPatch_flowGraph *fg = funcs[0]->getCFG();
+   std::set<BPatch_basicBlock *> blocks;
+   fg->getAllBasicBlocks(blocks);
 
-fg->getAllBasicBlocks(blocks);
+Each basic block has a list of instructions. Each instruction is
+represented by a ``Dyninst::InstructionAPI::Instruction::Ptr`` object.
 
-| Each basic block has a list of instructions. Each instruction is
-  represented by a
-| Dyninst::InstructionAPI::Instruction::Ptr object.
+.. code-block:: cpp
 
-std::set<BPatch_basicBlock \*>::iterator block_iter;
+   std::set<BPatch_basicBlock *>::iterator block_iter;
 
-for (block_iter = blocks.begin(); block_iter != blocks.end();
-++block_iter) {
-
-BPatch_basicBlock \*block = \*block_iter;
-
-std::vector<Dyninst::InstructionAPI::Instruction::Ptr> insns;
-
-block->getInstructions(insns);
-
-}
+   for (block_iter = blocks.begin(); block_iter != blocks.end(); ++block_iter) {
+      BPatch_basicBlock *block = *block_iter;
+      std::vector<Dyninst::InstructionAPI::Instruction::Ptr> insns;
+      block->getInstructions(insns);
+   }
 
 Given an Instruction object, which is described in the InstructionAPI
 Reference Manual, we can query for properties of this instruction.
@@ -306,23 +317,16 @@ InstructionAPI has numerous methods for inspecting the memory accesses,
 registers, and other properties of an instruction. This example simply
 checks whether this instruction accesses memory:
 
-std::vector<Dyninst::InstructionAPI::Instruction::Ptr>::iterator
+.. code-block:: cpp
 
-   insn_iter;
+   std::vector<Dyninst::InstructionAPI::Instruction::Ptr>::iterator insn_iter;
 
-for (insn_iter = insns.begin(); insn_iter != insns.end(); ++insn_iter)
-
-{
-
-   Dyninst::InstructionAPI::Instruction::Ptr insn = \*insn_iter;
-
-   if (insn->readsMemory() \|\| insn->writesMemory()) {
-
-   insns_access_memory++;
-
+   for (insn_iter = insns.begin(); insn_iter != insns.end(); ++insn_iter) {
+      Dyninst::InstructionAPI::Instruction::Ptr insn = *insn_iter;
+      if (insn->readsMemory() || insn->writesMemory()) {
+         insns_access_memory++;
+      }
    }
-
-}
 
 Instrumenting Memory Accesses
 -----------------------------
@@ -342,54 +346,38 @@ BPatch_function.findPoint(const std::set<BPatch_opCode>&). For example,
 to instrument all the loads and stores in a function named
 InterestingProcedure with a call to printf, one may write:
 
-BPatch_addressSpace \*app = ...;
 
-BPatch_image \*appImage = proc->getImage();
+.. code-block:: cpp
 
-// We’re interested in loads and stores
+   BPatch_addressSpace *app = ...;
+   BPatch_image *appImage = proc->getImage();
 
-std::set<BPatch_opCode> axs;
+   // We’re interested in loads and stores
+   std::set<BPatch_opCode> axs;
+   axs.insert(BPatch_opLoad);
+   axs.insert(BPatch_opStore);
 
-axs.insert(BPatch_opLoad);
+   // Scan the function InterestingProcedure and create instrumentation points
+   std::vector<BPatch_function*> funcs;
+   appImage->findFunction("InterestingProcedure", funcs);
+   std::vector<BPatch_point*>* points = funcs[0]->findPoint(axs);
 
-axs.insert(BPatch_opStore);
+   // Create the printf function call snippet
+   std::vector<BPatch_snippet*> printfArgs;
+   BPatch_snippet *fmt = new BPatch_constExpr("Access at: %p.\n");
+   printfArgs.push_back(fmt);
+   BPatch_snippet *eae = new BPatch_effectiveAddressExpr();
+   printfArgs.push_back(eae);
 
-// Scan the function InterestingProcedure and create instrumentation
-points
+   // Find the printf function
+   std::vector<BPatch_function *> printfFuncs;
+   appImage->findFunction("printf", printfFuncs);
 
-std::vector<BPatch_function*> funcs;
+   // Construct the function call snippet
+   BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
 
-appImage->findFunction(“InterestingProcedure”, funcs);
-
-std::vector<BPatch_point*>\* points = funcs[0]->findPoint(axs);
-
-// Create the printf function call snippet
-
-std::vector<BPatch_snippet*> printfArgs;
-
-BPatch_snippet \*fmt = new BPatch_constExpr("Access at: %p.\n");
-
-printfArgs.push_back(fmt);
-
-BPatch_snippet \*eae = new BPatch_effectiveAddressExpr();
-
-printfArgs.push_back(eae);
-
-// Find the printf function
-
-std::vector<BPatch_function \*> printfFuncs;
-
-appImage->findFunction("printf", printfFuncs);
-
-// Construct the function call snippet
-
-BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
-
-// Insert the snippet at the instrumentation points
-
-app->insertSnippet(printfCall, \*points);
-
-
+   // Insert the snippet at the instrumentation points
+   app->insertSnippet(printfCall, *points);
 
 Using DyninstAPI with the component libraries
 =============================================
@@ -404,33 +392,36 @@ is overloaded and namespaced to give consistent behavior. The
 definitions of all component library abstractions are located in the
 appropriate documentation.
 
-PatchAPI::PatchMgrPtr PatchAPI::convert(BPatch_addressSpace \*);
+.. code-block:: cpp
 
-PatchAPI::PatchObject \*PatchAPI::convert(BPatch_object \*);
 
-ParseAPI::CodeObject \*ParseAPI::convert(BPatch_object \*);
-
-SymtabAPI::Symtab \*SymtabAPI::convert(BPatch_object \*);
-
-SymtabAPI::Module \*SymtabAPI::convert(BPatch_module \*);
-
-PatchAPI::PatchFunction \*PatchAPI::convert(BPatch_function \*);
-
-ParseAPI::Function \*ParseAPI::convert(BPatch_function \*);
-
-PatchAPI::PatchBlock \*PatchAPI::convert(BPatch_basicBlock \*);
-
-ParseAPI::Block \*ParseAPI::convert(BPatch_basicBlock \*);
-
-PatchAPI::PatchEdge \*PatchAPI::convert(BPatch_edge \*);
-
-ParseAPI::Edge \*ParseAPI::convert(BPatch_edge \*);
-
-PatchAPI::Point \*PatchAPI::convert(BPatch_point \*, BPatch_callWhen);
-
-PatchAPI::SnippetPtr PatchAPI::convert(BPatch_snippet \*);
-
-SymtabAPI::Type \*SymtabAPI::convert(BPatch_type \*);
+   PatchAPI::PatchMgrPtr PatchAPI::convert(BPatch_addressSpace *);
+   
+   PatchAPI::PatchObject *PatchAPI::convert(BPatch_object *);
+   
+   ParseAPI::CodeObject *ParseAPI::convert(BPatch_object *);
+   
+   SymtabAPI::Symtab *SymtabAPI::convert(BPatch_object *);
+   
+   SymtabAPI::Module *SymtabAPI::convert(BPatch_module *);
+   
+   PatchAPI::PatchFunction *PatchAPI::convert(BPatch_function *);
+   
+   ParseAPI::Function *ParseAPI::convert(BPatch_function *);
+   
+   PatchAPI::PatchBlock *PatchAPI::convert(BPatch_basicBlock *);
+   
+   ParseAPI::Block *ParseAPI::convert(BPatch_basicBlock *);
+   
+   PatchAPI::PatchEdge *PatchAPI::convert(BPatch_edge *);
+   
+   ParseAPI::Edge *ParseAPI::convert(BPatch_edge *);
+   
+   PatchAPI::Point *PatchAPI::convert(BPatch_point *, BPatch_callWhen);
+   
+   PatchAPI::SnippetPtr PatchAPI::convert(BPatch_snippet *);
+   
+   SymtabAPI::Type *SymtabAPI::convert(BPatch_type *);
 
 Using the API
 =============
@@ -477,16 +468,17 @@ mutator is the sample program given in Appendix A - Complete Examples.
 The following fragment of a Makefile shows how to link your mutator
 program with the Dyninst library on most platforms:
 
-   # DYNINST_INCLUDE and DYNINST_LIB should be set to locations
+.. code-block:: make
 
+   
+   # DYNINST_INCLUDE and DYNINST_LIB should be set to locations
    # where Dyninst header and library files were installed, respectively
 
-retee.o: retee.c
-
-$(CC) -c $(CFLAGS) -I$(DYNINST_INCLUDE) retee.c –std=c++11x
-
-| retee: retee.o
-| $(CC) retee.o -L$(DYNINST_LIB) -ldyninstAPI -o retee –std=c++11x
+   retee.o: retee.c
+      $(CC) -c $(CFLAGS) -I$(DYNINST_INCLUDE) retee.c –std=c++11x
+   
+   retee: retee.o
+      $(CC) retee.o -L$(DYNINST_LIB) -ldyninstAPI -o retee –std=c++11x
 
 On Linux, the options -lelf and -ldw may be required at the link step.
 You will also need to make sure that the LD_LIBRARY_PATH environment
@@ -505,20 +497,18 @@ Under Windows NT, the mutator also needs to be linked with the dbghelp
 library, which is included in the Microsoft Platform SDK. Below is a
 fragment from a Makefile for Windows NT:
 
-   # DYNINST_INCLUDE and DYNINST_LIB should be set to locations
+.. code-block:: make
 
+   
+   # DYNINST_INCLUDE and DYNINST_LIB should be set to locations
    # where Dyninst header and library files were installed, respectively
 
-CC = cl
+   CC = cl
+   retee.obj: retee.c
+      $(CC) -c $(CFLAGS) -I$(DYNINST_INCLUDE)/h
 
-retee.obj: retee.c
-
-   $(CC) -c $(CFLAGS) -I$(DYNINST_INCLUDE)/h
-
-| retee.exe: retee.obj
-| link -out:retee.exe retee.obj $(DYNINST_LIB)\libdyninstAPI.lib \\
-
-   dbghelp.lib
+   retee.exe: retee.obj
+      link -out:retee.exe retee.obj $(DYNINST_LIB)\libdyninstAPI.lib dbghelp.lib
 
 Setting Up the Application Program (mutatee)
 --------------------------------------------
@@ -535,12 +525,12 @@ program, an additional environment variable must be set. The variable
 DYNINSTAPI_RT_LIB should be set to the full pathname of the run time
 instrumentation library, which should be:
 
-   NOTE: DYNINST_LIB should be set to the location where Dyninst library
-   files were installed
+.. note::
 
-$(DYNINST_LIB)/libdyninstAPI_RT.so (UNIX)
+   DYNINST_LIB should be set to the location where Dyninst library files were installed
 
-%DYNINST_LIB/libdyninstAPI_RT.dll (Windows)
+   | ``$(DYNINST_LIB)/libdyninstAPI_RT.so`` (UNIX)
+   | ``%DYNINST_LIB/libdyninstAPI_RT.dll`` (Windows)
 
 Running the Mutator
 -------------------
@@ -549,212 +539,12 @@ At this point, you should be ready to run your application program with
 your mutator. For example, to start the sample program shown in Appendix
 A - Complete Examples:
 
-% retee foo <pid>
+.. code-block:: bash
 
-Optimizing Dyninst Performance
-------------------------------
+   $ retee foo <pid>
 
-This section describes how to tune Dyninst for optimum performance.
-During the course of a run, Dyninst will perform several types of
-analysis on the binary, make safety assumptions about instrumentation
-that is inserted, and rewrite the binary (perhaps several times). Given
-some guidance from the user, Dyninst can make assumptions about what
-work it needs to do and can deliver significant performance
-improvements.
-
-There are two areas of Dyninst performance users typically care about.
-First, the time it takes Dyninst to parse and instrument a program. This
-is typically the time it takes Dyninst to start and analyze a program,
-and the time it takes to modify the program when putting in
-instrumentation. Second, many users care about the time instrumentation
-takes in the modified mutatee. This time is highly dependent on both the
-amount and type of instrumentation put it, but it is still possible to
-eliminate some of the Dyninst overhead around the instrumentation.
-
-The following subsections describe techniques for improving the
-performance of these two areas.
-
-Optimizing Mutator Performance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-CPU time in the Dyninst mutator is usually consumed by either parsing or
-instrumenting binaries. When a new binary is loaded, Dyninst will
-analyze the code looking for instrumentation points, global variables,
-and attempting to identify functions in areas of code that may not have
-symbols. Upon user request, Dyninst will also parse debug information
-from the binary, which includes local variable, line, and type
-information.
-
-Since Dyninst 10.0.0, Dyninst supports parsing binaries in parallel,
-which significantly improve the analysis speed. We typically have about
-4X speedup when analyzing binaries with 8 threads. By default, Dyninst
-will use all the available cores on your system. Please set environment
-variable OMP_NUM_THREADS to the number of desired threads.
-
-Debugging information is lazily parsed separately from the rest of the
-binary parsing. Accessing line, type, or local variable information will
-cause Dyninst to parse the debug information for all three of these.
-
-Another common source of mutator time is spent re-writing the mutatee to
-add instrumentation. When instrumentation is inserted into a function,
-Dyninst may need to rewrite some or all of the function to fit the
-instrumentation in. If multiple pieces of instrumentation are being
-inserted into a function, Dyninst may need to rewrite that function
-multiple times.
-
-If the user knows that they will be inserting multiple pieces of
-instrumentation into one function, they can batch the instrumentation
-into one bundle, so that the function will only be re-written once,
-using the BPatch_process::beginInsertionSet and
-BPatch_­process::end­Inser­tion­Set functions (see section 4.4). Using
-these functions can result in a significant performance win when
-inserting instrumentation in many locations.
-
-To use the insertion set functions, add a call to beginInsertionSet
-before inserting instrumentation. Dyninst will start buffering up all
-instrumentation insertions. After the last piece of instrumentation is
-inserted, call finalizeInsertionSet, and all instrumentation will be
-atomically inserted into the mutatee, with each function being rewritten
-at most once.
-
-Optimizing Mutatee Performance
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-As instrumentation is inserted into a mutatee, it will start to run
-slower. The slowdown is heavily influenced by three factors: the number
-of points being instrumented, the instrumentation itself, and the
-Dyninst overhead around each piece of instrumentation. The Dyninst
-overhead comes from pieces of protection code (described in more detail
-below) that do things such as saving/restoring registers around
-instrumentation, checking for instrumentation recursion, and performing
-thread safety checks.
-
-The factor by which Dyninst overhead influences mutatee run-time depends
-on the type of instrumentation being inserted. When inserting
-instrumentation that runs a memory cache simulator, the Dyninst overhead
-may be negligible. On the other-hand, when inserting instrumentation
-that increments a counter, the Dyninst overhead will dominate the time
-spent in instrumentation. Remember, optimizing the instrumentation being
-inserted may sometimes be more important than optimizing the Dyninst
-overhead. Many users have had success writing tools that make use of
-Dyninst’s ability to dynamically remove instrumentation as a performance
-improvement.
-
-The instrumentation overhead results from safety and correctness checks
-inserted by Dyninst around instrumentation. Dyninst will automatically
-attempt to remove as much of this overhead as possible, however it
-sometimes must make a conservative decision to leave the overhead in.
-Given additional, user-provided information Dyninst can make better
-choices about what safety checks to leave in. An unoptimized
-post-Dyninst 5.0 instrumentation snippet looks like the following:
-
-+----------------------------------+----------------------------------+
-| **Save General Purpose           | In order to ensure that          |
-| Registers**                      | instrumentation doesn’t corrupt  |
-|                                  | the program, Dyninst saves all   |
-|                                  | live general purpose registers.  |
-+----------------------------------+----------------------------------+
-| **Save Floating Point            | Dyninst may decide to separately |
-| Registers**                      | save any floating point          |
-|                                  | registers that may be corrupted  |
-|                                  | by instrumentation.              |
-+----------------------------------+----------------------------------+
-| **Generate A Stack Frame**       | Dyninst builds a stack frame for |
-|                                  | instrumentation to run under.    |
-|                                  | This provides the illusion to    |
-|                                  | instrumentation that it is       |
-|                                  | running as its own function.     |
-+----------------------------------+----------------------------------+
-| **Calculate Thread Index**       | Calculate an index value that    |
-|                                  | identifies the current thread.   |
-|                                  | This is primarily used as input  |
-|                                  | to the Trampoline Guard.         |
-+----------------------------------+----------------------------------+
-| **Test and Set Trampoline        | Test to see if we are already    |
-| Guard**                          | recursively executing under      |
-|                                  | instrumentation, and skip the    |
-|                                  | user instrumentation if we are.  |
-+----------------------------------+----------------------------------+
-| **Execute User Instrumentation** | Execute any BPatch_snippet code. |
-+----------------------------------+----------------------------------+
-| **Unset Trampoline Guard**       | Marks the this thread as no      |
-|                                  | longer being in instrumentation  |
-+----------------------------------+----------------------------------+
-| **Clean Stack Frame**            | Clean the stack frame that was   |
-|                                  | generated for instrumentation.   |
-+----------------------------------+----------------------------------+
-| **Restore Floating Point         | Restore the floating point       |
-| Registers**                      | registers to their original      |
-|                                  | state.                           |
-+----------------------------------+----------------------------------+
-| **Restore General Purpose        | Restore the general purpose      |
-| Registers**                      | registers to their original      |
-|                                  | state.                           |
-+----------------------------------+----------------------------------+
-
-Dyninst will attempt to eliminate as much of its overhead as is
-possible. The Dyninst user can assist Dyninst by doing the following:
-
--  **Write BPatch_snippet code that avoids making function calls.**
-   Dyninst will attempt to perform analysis on the user written
-   instrumentation to determine which general purpose and floating point
-   registers can be saved. It is difficult to analyze function calls
-   that may be nested arbitrarily deep. Dyninst will not analyze any
-   deeper than two levels of function calls before assuming that the
-   instrumentation clobbers all registers and it needs to save
-   everything.
-
-..
-
-   In addition, not making function calls from instrumentation allows
-   Dyninst to eliminate its tramp guard and thread index calculation.
-   Instrumentation that does not make a function call cannot recursively
-   execute more instrumentation.
-
--  **Call BPatch::setTrampRecursive(true) if instrumentation cannot
-   execute recursively.** If instrumentation must make a function call,
-   but will not execute recursively, then enable trampoline recursion.
-   This will cause Dyninst to stop generating a trampoline guard and
-   thread index calculation on all future pieces of instrumentation. An
-   example of instrumentation recursion would be instrumenting a call to
-   write with instrumentation that calls printf—write will start calling
-   printf printf will re-call write.
-
--  **Call BPatch::setSaveFPR(false) if instrumentation will not clobber
-   floating point registers**. This will cause Dyninst to stop saving
-   floating point registers, which can be a significant win on some
-   platforms.
-
--  **Use simple BPatch_snippet objects when possible**. Dyninst will
-   attempt to recognize, peep-hole optimize, and simplify frequently
-   used code snippets when it finds them. For example, on x86 based
-   platforms Dyninst will recognize snippets that do operations like
-   ‘var = constant’ or ‘var++’ and turn these into optimized assembly
-   instructions that take advantage of CISC machine instructions.
-
--  **Call BPatch::setInstrStackFrames(false) before inserting
-   instrumentation that does not need to set up stack frames. Dyninst
-   allows you to force stack frames to be generated for all
-   instrumentation. This is useful for some applications (e.g.,
-   debugging your instrumentation code) but allowing Dyninst to omit
-   stack frames wherever possible will improve performance. This flag is
-   false by default; it should be enabled for as little instrumentation
-   as possible in order to maximize the benefit from optimizing away
-   stack frames.**
-
--  **Avoid conditional instrumentation wherever possible.** Conditional
-   logic in your instrumentation makes it more difficult to avoid saving
-   the state of the flags.
-
--  **Avoid unnecessary instrumentation.** Dyninst provides you with all
-   kinds of information that you can use to select only the points of
-   actual interest for instrumentation. Use this information to
-   instrument as selectively as possible. The best way to optimize your
-   instrumentation, ultimately, is to know *a priori* that it was
-   unnecessary and not insert it.
-
-Appendix A - Complete Examples
-==============================
+Complete Examples
+=================
 
 In this section we show two complete examples: the programs from Section
 3 and a complete Dyninst program, retee.
@@ -764,1286 +554,709 @@ In this section we show two complete examples: the programs from Section
 Instrumenting a function
 ------------------------
 
-#include <stdio.h>
+.. code-block:: cpp
+
+   #include <stdio.h>
+   #include "BPatch.h"
+   #include "BPatch_addressSpace.h"
+   #include "BPatch_process.h"
+   #include "BPatch_binaryEdit.h"
+   #include "BPatch_point.h"
+   #include "BPatch_function.h"
+   
+   using namespace std;
+   using namespace Dyninst;
+   
+   // Create an instance of class BPatch
+   BPatch bpatch;
+   
+   // Different ways to perform instrumentation
+   typedef enum {
+     create,
+     attach,
+     open
+   } accessType_t;
+   
+   // Attach, create, or open a file for rewriting
+   BPatch_addressSpace* startInstrumenting(
+       accessType_t accessType,
+       const char* name,
+       int pid,
+       const char* argv[]) {
+   
+     BPatch_addressSpace* handle = NULL;
+     switch(accessType) {
+       case create:
+         handle = bpatch.processCreate(name, argv);
+         if (!handle) { fprintf(stderr, "processCreate failed\n"); }
+         break;
+   
+       case attach:
+         handle = bpatch.processAttach(name, pid);
+         if (!handle) { fprintf(stderr, "processAttach failed\n"); }
+         break;
+   
+       case open:
+         // Open the binary file and all dependencies
+         handle = bpatch.openBinary(name, true);
+         if (!handle) { fprintf(stderr, "openBinary failed\n"); }
+         break;
+     }
+     return handle;
+   }
+   
+   // Find a point at which to insert instrumentation
+   std::vector<BPatch_point*>* findPoint(
+       BPatch_addressSpace* app,
+       const char* name,
+       BPatch_procedureLocation loc) {
+   
+     std::vector<BPatch_function*> functions;
+     std::vector<BPatch_point*>* points;
+   
+     // Scan for functions named "name"
+     BPatch_image* appImage = app->getImage();
+     appImage->findFunction(name, functions);
+   
+     if (functions.size() == 0) {
+       fprintf(stderr, "No function %s\n", name);
+       return points;
+     } else if (functions.size() > 1) {
+       fprintf(stderr, "More than one %s; using the first one\n", name);
+     }
+   
+     // Locate the relevant points
+     points = functions[0]->findPoint(loc);
+     
+     return points;
+   }
+   
+   // Create and insert an increment snippet
+   bool createAndInsertSnippet(
+       BPatch_addressSpace* app,
+       std::vector<BPatch_point*>* points) {
+   
+     BPatch_image* appImage = app->getImage();
+   
+     // Create an increment snippet
+     BPatch_variableExpr* intCounter =
+     app->malloc(*(appImage->findType("int")), "myCounter");
+   
+     BPatch_arithExpr addOne(
+       BPatch_assign,
+       *intCounter,
+       BPatch_arithExpr(
+         BPatch_plus,
+         *intCounter,
+         BPatch_constExpr(1)
+       )
+     );
+   
+     // Insert the snippet
+     if (!app->insertSnippet(addOne, *points)) {
+       fprintf(stderr, "insertSnippet failed\n");
+       return false;
+     }
+     return true;
+   }
+   
+   // Create and insert a printf snippet
+   bool createAndInsertSnippet2(
+     BPatch_addressSpace* app,
+     std::vector<BPatch_point*>* points) {
+   
+     BPatch_image* appImage = app->getImage();
+   
+     // Create the printf function call snippet
+     std::vector<BPatch_snippet*> printfArgs;
+     BPatch_snippet* fmt = new BPatch_constExpr("InterestingProcedure called %d times\n");
+     printfArgs.push_back(fmt);
+     BPatch_variableExpr* var = appImage->findVariable("myCounter");
+   
+     if (!var) {
+       fprintf(stderr, "Could not find 'myCounter' variable\n");
+       return false;
+     } else {
+       printfArgs.push_back(var);
+     }
+   
+     // Find the printf function
+     std::vector<BPatch_function*> printfFuncs;
+     appImage->findFunction("printf", printfFuncs);
+   
+     if (printfFuncs.size() == 0) {
+       fprintf(stderr, "Could not find printf\n");
+       return false;
+     }
+   
+     // Construct a function call snippet
+     BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
+   
+     // Insert the snippet
+     if (!app->insertSnippet(printfCall, *points)) {
+       fprintf(stderr, "insertSnippet failed\n");
+       return false;
+     }
+     return true;
+   }
+   
+   void finishInstrumenting(BPatch_addressSpace* app, const char*newName) {
+     BPatch_process* appProc = dynamic_cast<BPatch_process*>(app);
+     BPatch_binaryEdit* appBin = dynamic_cast<BPatch_binaryEdit*>(app);
+     
+     if (appProc) {
+       if (!appProc->continueExecution()) {
+         fprintf(stderr, "continueExecution failed\n");
+       }
+       
+       while (!appProc->isTerminated()) {
+         bpatch.waitForStatusChange();
+       }
+     } else if (appBin) {
+       if (!appBin->writeFile(newName)) {
+         fprintf(stderr, "writeFile failed\n");
+       }
+     }
+   }
+   
+   int main() {
+   
+     // Set up information about the program to be instrumented
+     const char* progName = "InterestingProgram";
+     int progPID = 42;
+     const char* progArgv[] = {"InterestingProgram", "-h", NULL};
+   
+     accessType_t mode = create;
+   
+     // Create/attach/open a binary
+     BPatch_addressSpace* app = startInstrumenting(mode, progName, progPID, progArgv);
+     if (!app) {
+       fprintf(stderr, "startInstrumenting failed\n");
+       exit(1);
+     }
+   
+     // Find the entry point for function InterestingProcedure
+     const char* interestingFuncName = "InterestingProcedure";
+     std::vector<BPatch_point*>* entryPoint = findPoint(app, interestingFuncName, BPatch_entry);
+     
+     if (!entryPoint || entryPoint->size() == 0) {
+       fprintf(stderr, "No entry points for %s\n", interestingFuncName);
+       exit(1);
+     }
+   
+     // Create and insert instrumentation snippet
+     if (!createAndInsertSnippet(app, entryPoint)) {
+       fprintf(stderr, "createAndInsertSnippet failed\n");
+       exit(1);
+     }
+   
+     // Find the exit point of main
+     std::vector<BPatch_point*>* exitPoint = findPoint(app, "main", BPatch_exit);
+     if (!exitPoint }} exitPoint->size() == 0) {
+       fprintf(stderr, "No exit points for main\n");
+       exit(1);
+     }
+   
+     // Create and insert instrumentation snippet 2
+     if (!createAndInsertSnippet2(app, exitPoint)) {
+     fprintf(stderr, "createAndInsertSnippet2 failed\n");
+     exit(1);
+     }
+   
+     // Finish instrumentation
+     const char* progName2 = "InterestingProgram-rewritten";
+     finishInstrumenting(app, progName2);
+   }
 
-#include "BPatch.h"
-
-#include "BPatch_addressSpace.h"
-
-#include "BPatch_process.h"
-
-#include "BPatch_binaryEdit.h"
-
-#include "BPatch_point.h"
-
-#include "BPatch_function.h"
-
-using namespace std;
-
-using namespace Dyninst;
-
-// Create an instance of class BPatch
-
-BPatch bpatch;
-
-// Different ways to perform instrumentation
-
-typedef enum {
-
-create,
-
-attach,
-
-open
-
-} accessType_t;
-
-// Attach, create, or open a file for rewriting
-
-BPatch_addressSpace\* startInstrumenting(accessType_t accessType,
-
-const char\* name,
-
-int pid,
-
-const char\* argv[]) {
-
-BPatch_addressSpace\* handle = NULL;
-
-switch(accessType) {
-
-case create:
-
-handle = bpatch.processCreate(name, argv);
-
-if (!handle) { fprintf(stderr, "processCreate failed\n"); }
-
-break;
-
-case attach:
-
-handle = bpatch.processAttach(name, pid);
-
-if (!handle) { fprintf(stderr, "processAttach failed\n"); }
-
-break;
-
-case open:
-
-// Open the binary file and all dependencies
-
-handle = bpatch.openBinary(name, true);
-
-if (!handle) { fprintf(stderr, "openBinary failed\n"); }
-
-break;
-
-}
-
-return handle;
-
-}
-
-// Find a point at which to insert instrumentation
-
-std::vector<BPatch_point*>\* findPoint(BPatch_addressSpace\* app,
-
-const char\* name,
-
-BPatch_procedureLocation loc) {
-
-std::vector<BPatch_function*> functions;
-
-std::vector<BPatch_point*>\* points;
-
-// Scan for functions named "name"
-
-BPatch_image\* appImage = app->getImage();
-
-appImage->findFunction(name, functions);
-
-if (functions.size() == 0) {
-
-fprintf(stderr, "No function %s\n", name);
-
-return points;
-
-} else if (functions.size() > 1) {
-
-fprintf(stderr, "More than one %s; using the first one\n", name);
-
-}
-
-// Locate the relevant points
-
-points = functions[0]->findPoint(loc);
-
-return points;
-
-}
-
-// Create and insert an increment snippet
-
-bool createAndInsertSnippet(BPatch_addressSpace\* app,
-
-std::vector<BPatch_point*>\* points) {
-
-BPatch_image\* appImage = app->getImage();
-
-// Create an increment snippet
-
-BPatch_variableExpr\* intCounter =
-
-app->malloc(*(appImage->findType("int")), "myCounter");
-
-BPatch_arithExpr addOne(BPatch_assign,
-
-\*intCounter,
-
-BPatch_arithExpr(BPatch_plus,
-
-\*intCounter,
-
-BPatch_constExpr(1)));
-
-// Insert the snippet
-
-if (!app->insertSnippet(addOne, \*points)) {
-
-fprintf(stderr, "insertSnippet failed\n");
-
-return false;
-
-}
-
-return true;
-
-}
-
-// Create and insert a printf snippet
-
-bool createAndInsertSnippet2(BPatch_addressSpace\* app,
-
-std::vector<BPatch_point*>\* points) {
-
-BPatch_image\* appImage = app->getImage();
-
-// Create the printf function call snippet
-
-std::vector<BPatch_snippet*> printfArgs;
-
-BPatch_snippet\* fmt =
-
-new BPatch_constExpr("InterestingProcedure called %d times\n");
-
-printfArgs.push_back(fmt);
-
-BPatch_variableExpr\* var = appImage->findVariable("myCounter");
-
-if (!var) {
-
-fprintf(stderr, "Could not find 'myCounter' variable\n");
-
-return false;
-
-} else {
-
-printfArgs.push_back(var);
-
-}
-
-// Find the printf function
-
-std::vector<BPatch_function*> printfFuncs;
-
-appImage->findFunction("printf", printfFuncs);
-
-if (printfFuncs.size() == 0) {
-
-fprintf(stderr, "Could not find printf\n");
-
-return false;
-
-}
-
-// Construct a function call snippet
-
-BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
-
-// Insert the snippet
-
-if (!app->insertSnippet(printfCall, \*points)) {
-
-fprintf(stderr, "insertSnippet failed\n");
-
-return false;
-
-}
-
-return true;
-
-}
-
-void finishInstrumenting(BPatch_addressSpace\* app, const char\*
-newName)
-
-{
-
-BPatch_process\* appProc = dynamic_cast<BPatch_process*>(app);
-
-BPatch_binaryEdit\* appBin = dynamic_cast<BPatch_binaryEdit*>(app);
-
-if (appProc) {
-
-if (!appProc->continueExecution()) {
-
-fprintf(stderr, "continueExecution failed\n");
-
-}
-
-while (!appProc->isTerminated()) {
-
-bpatch.waitForStatusChange();
-
-}
-
-} else if (appBin) {
-
-if (!appBin->writeFile(newName)) {
-
-fprintf(stderr, "writeFile failed\n");
-
-}
-
-}
-
-}
-
-int main() {
-
-// Set up information about the program to be instrumented
-
-const char\* progName = "InterestingProgram";
-
-int progPID = 42;
-
-const char\* progArgv[] = {"InterestingProgram", "-h", NULL};
-
-accessType_t mode = create;
-
-// Create/attach/open a binary
-
-BPatch_addressSpace\* app =
-
-startInstrumenting(mode, progName, progPID, progArgv);
-
-if (!app) {
-
-fprintf(stderr, "startInstrumenting failed\n");
-
-exit(1);
-
-}
-
-// Find the entry point for function InterestingProcedure
-
-const char\* interestingFuncName = "InterestingProcedure";
-
-std::vector<BPatch_point*>\* entryPoint =
-
-findPoint(app, interestingFuncName, BPatch_entry);
-
-if (!entryPoint \|\| entryPoint->size() == 0) {
-
-fprintf(stderr, "No entry points for %s\n", interestingFuncName);
-
-exit(1);
-
-}
-
-// Create and insert instrumentation snippet
-
-if (!createAndInsertSnippet(app, entryPoint)) {
-
-fprintf(stderr, "createAndInsertSnippet failed\n");
-
-exit(1);
-
-}
-
-// Find the exit point of main
-
-std::vector<BPatch_point*>\* exitPoint =
-
-findPoint(app, "main", BPatch_exit);
-
-if (!exitPoint \|\| exitPoint->size() == 0) {
-
-fprintf(stderr, "No exit points for main\n");
-
-exit(1);
-
-}
-
-// Create and insert instrumentation snippet 2
-
-if (!createAndInsertSnippet2(app, exitPoint)) {
-
-fprintf(stderr, "createAndInsertSnippet2 failed\n");
-
-exit(1);
-
-}
-
-// Finish instrumentation
-
-const char\* progName2 = "InterestingProgram-rewritten";
-
-finishInstrumenting(app, progName2);
-
-}
 
 .. _binary-analysis-1:
 
 Binary Analysis
 ---------------
 
-#include <stdio.h>
+.. code-block: cpp
+
+   #include "BPatch.h"
+   #include "BPatch_addressSpace.h"
+   #include "BPatch_binaryEdit.h"
+   #include "BPatch_flowGraph.h"
+   #include "BPatch_function.h"
+   #include "BPatch_process.h"
+   #include <stdio.h>
+   
+   using namespace std;
+   using namespace Dyninst;
+   
+   // Create an instance of class BPatch
+   BPatch bpatch;
+   
+   // Different ways to perform instrumentation
+   typedef enum { create, attach, open } accessType_t;
+   
+   BPatch_addressSpace *startInstrumenting(accessType_t accessType,
+                                           const char *name, int pid,
+                                           const char *argv[]) {
+     BPatch_addressSpace *handle = NULL;
+     switch (accessType) {
+     case create:
+       handle = bpatch.processCreate(name, argv);
+       if (!handle) {
+         fprintf(stderr, "processCreate failed\n");
+       }
+       break;
+     case attach:
+       handle = bpatch.processAttach(name, pid);
+       if (!handle) {
+         fprintf(stderr, "processAttach failed\n");
+       }
+       break;
+     case open:
+       // Open the binary file and all dependencies
+       handle = bpatch.openBinary(name, true);
+       if (!handle) {
+         fprintf(stderr, "openBinary failed\n");
+       }
+       break;
+     }
+     return handle;
+   }
+   
+   int binaryAnalysis(BPatch_addressSpace *app) {
+     BPatch_image *appImage = app->getImage();
+     int insns_access_memory = 0;
+     std::vector<BPatch_function *> functions;
+     appImage->findFunction("InterestingProcedure", functions);
+     if (functions.size() == 0) {
+       fprintf(stderr, "No function InterestingProcedure\n");
+       return insns_access_memory;
+     } else if (functions.size() > 1) {
+       fprintf(stderr, "More than one InterestingProcedure; using the first one\n");
+     }
+     BPatch_flowGraph *fg = functions[0]->getCFG();
+     std::set<BPatch_basicBlock *> blocks;
+     fg->getAllBasicBlocks(blocks);
+     for (auto block_iter = blocks.begin(); block_iter != blocks.end(); ++block_iter) {
+       BPatch_basicBlock *block = *block_iter;
+       std::vector<InstructionAPI::Instruction::Ptr> insns;
+       block->getInstructions(insns);
+       for (auto insn_iter = insns.begin(); insn_iter != insns.end(); ++insn_iter) {
+         InstructionAPI::Instruction::Ptr insn = *insn_iter;
+         if (insn->readsMemory() }} insn->writesMemory()) {
+           insns_access_memory++;
+         }
+       }
+     }
+     return insns_access_memory;
+   }
+   
+   int main() {
+     // Set up information about the program to be instrumented
+     const char *progName = "InterestingProgram";
+     int progPID = 42;
+     const char *progArgv[] = {"InterestingProgram", "-h", NULL};
+     accessType_t mode = create;
+     
+     // Create/attach/open a binary
+     BPatch_addressSpace *app = startInstrumenting(mode, progName, progPID, progArgv);
+     if (!app) {
+       fprintf(stderr, "startInstrumenting failed\n");
+       exit(1);
+     }
+     int memAccesses = binaryAnalysis(app);
+     fprintf(stderr, "Found %d memory accesses\n", memAccesses);
+   }
 
-#include "BPatch.h"
-
-#include "BPatch_addressSpace.h"
-
-#include "BPatch_process.h"
-
-#include "BPatch_binaryEdit.h"
-
-#include "BPatch_function.h"
-
-#include "BPatch_flowGraph.h"
-
-using namespace std;
-
-using namespace Dyninst;
-
-// Create an instance of class BPatch
-
-BPatch bpatch;
-
-// Different ways to perform instrumentation
-
-typedef enum {
-
-create,
-
-attach,
-
-open
-
-} accessType_t;
-
-BPatch_addressSpace\* startInstrumenting(accessType_t accessType,
-
-const char\* name,
-
-int pid,
-
-const char\* argv[]) {
-
-BPatch_addressSpace\* handle = NULL;
-
-switch(accessType) {
-
-case create:
-
-handle = bpatch.processCreate(name, argv);
-
-if (!handle) { fprintf(stderr, "processCreate failed\n"); }
-
-break;
-
-case attach:
-
-handle = bpatch.processAttach(name, pid);
-
-if (!handle) { fprintf(stderr, "processAttach failed\n"); }
-
-break;
-
-case open:
-
-// Open the binary file and all dependencies
-
-handle = bpatch.openBinary(name, true);
-
-if (!handle) { fprintf(stderr, "openBinary failed\n"); }
-
-break;
-
-}
-
-return handle;
-
-}
-
-int binaryAnalysis(BPatch_addressSpace\* app) {
-
-BPatch_image\* appImage = app->getImage();
-
-int insns_access_memory = 0;
-
-std::vector<BPatch_function*> functions;
-
-appImage->findFunction("InterestingProcedure", functions);
-
-if (functions.size() == 0) {
-
-fprintf(stderr, "No function InterestingProcedure\n");
-
-return insns_access_memory;
-
-} else if (functions.size() > 1) {
-
-fprintf(stderr, "More than one InterestingProcedure; using the first
-one\n");
-
-}
-
-BPatch_flowGraph\* fg = functions[0]->getCFG();
-
-std::set<BPatch_basicBlock*> blocks;
-
-fg->getAllBasicBlocks(blocks);
-
-for (auto block_iter = blocks.begin();
-
-block_iter != blocks.end();
-
-++block_iter) {
-
-BPatch_basicBlock\* block = \*block_iter;
-
-std::vector<InstructionAPI::Instruction::Ptr> insns;
-
-block->getInstructions(insns);
-
-for (auto insn_iter = insns.begin();
-
-insn_iter != insns.end();
-
-++insn_iter) {
-
-InstructionAPI::Instruction::Ptr insn = \*insn_iter;
-
-if (insn->readsMemory() \|\| insn->writesMemory()) {
-
-insns_access_memory++;
-
-}
-
-}
-
-}
-
-return insns_access_memory;
-
-}
-
-int main() {
-
-// Set up information about the program to be instrumented
-
-const char\* progName = "InterestingProgram";
-
-int progPID = 42;
-
-const char\* progArgv[] = {"InterestingProgram", "-h", NULL};
-
-accessType_t mode = create;
-
-// Create/attach/open a binary
-
-BPatch_addressSpace\* app =
-
-startInstrumenting(mode, progName, progPID, progArgv);
-
-if (!app) {
-
-fprintf(stderr, "startInstrumenting failed\n");
-
-exit(1);
-
-}
-
-int memAccesses = binaryAnalysis(app);
-
-fprintf(stderr, "Found %d memory accesses\n", memAccesses);
-
-}
 
 .. _instrumenting-memory-accesses-1:
 
 Instrumenting Memory Accesses
 -----------------------------
 
-#include <stdio.h>
-
-#include "BPatch.h"
-
-#include "BPatch_addressSpace.h"
-
-#include "BPatch_process.h"
-
-#include "BPatch_binaryEdit.h"
-
-#include "BPatch_point.h"
-
-#include "BPatch_function.h"
-
-using namespace std;
-
-using namespace Dyninst;
-
-// Create an instance of class BPatch
-
-BPatch bpatch;
-
-// Different ways to perform instrumentation
-
-typedef enum {
-
-create,
-
-attach,
-
-open
-
-} accessType_t;
-
-// Attach, create, or open a file for rewriting
-
-BPatch_addressSpace\* startInstrumenting(accessType_t accessType,
-
-const char\* name,
-
-int pid,
-
-const char\* argv[]) {
-
-BPatch_addressSpace\* handle = NULL;
-
-switch(accessType) {
-
-case create:
-
-handle = bpatch.processCreate(name, argv);
-
-if (!handle) { fprintf(stderr, "processCreate failed\n"); }
-
-break;
-
-case attach:
-
-handle = bpatch.processAttach(name, pid);
-
-if (!handle) { fprintf(stderr, "processAttach failed\n"); }
-
-break;
-
-   case open:
-
-// Open the binary file; do not open dependencies
-
-handle = bpatch.openBinary(name, false);
-
-if (!handle) { fprintf(stderr, "openBinary failed\n"); }
-
-break;
-
-}
-
-return handle;
-
-}
-
-bool instrumentMemoryAccesses(BPatch_addressSpace\* app) {
-
-BPatch_image\* appImage = app->getImage();
-
-// We're interested in loads and stores
-
-BPatch_Set<BPatch_opCode> axs;
-
-axs.insert(BPatch_opLoad);
-
-axs.insert(BPatch_opStore);
-
-// Scan the function InterestingProcedure
-
-// and create instrumentation points
-
-std::vector<BPatch_function*> functions;
-
-appImage->findFunction("InterestingProcedure", functions);
-
-std::vector<BPatch_point*>\* points =
-
-functions[0]->findPoint(axs);
-
-if (!points) {
-
-fprintf(stderr, "No load/store points found\n");
-
-return false;
-
-}
-
-// Create the printf function call snippet
-
-std::vector<BPatch_snippet*> printfArgs;
-
-BPatch_snippet\* fmt = new BPatch_constExpr("Access at: 0x%lx\n");
-
-printfArgs.push_back(fmt);
-
-BPatch_snippet\* eae = new BPatch_effectiveAddressExpr();
-
-printfArgs.push_back(eae);
-
-// Find the printf function
-
-std::vector<BPatch_function*> printfFuncs;
-
-appImage->findFunction("printf", printfFuncs);
-
-if (printfFuncs.size() == 0) {
-
-fprintf(stderr, "Could not find printf\n");
-
-return false;
-
-}
-
-// Construct a function call snippet
-
-BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
-
-// Insert the snippet at the instrumentation points
-
-if (!app->insertSnippet(printfCall, \*points)) {
-
-fprintf(stderr, "insertSnippet failed\n");
-
-return false;
-
-}
-
-return true;
-
-}
-
-void finishInstrumenting(BPatch_addressSpace\* app, const char\*
-newName) {
-
-BPatch_process\* appProc = dynamic_cast<BPatch_process*>(app);
-
-BPatch_binaryEdit\* appBin = dynamic_cast<BPatch_binaryEdit*>(app);
-
-if (appProc) {
-
-if (!appProc->continueExecution()) {
-
-fprintf(stderr, "continueExecution failed\n");
-
-}
-
-while (!appProc->isTerminated()) {
-
-bpatch.waitForStatusChange();
-
-}
-
-} else if (appBin) {
-
-if (!appBin->writeFile(newName)) {
-
-fprintf(stderr, "writeFile failed\n");
-
-}
-
-}
-
-}
-
-int main() {
-
-// Set up information about the program to be instrumented
-
-const char\* progName = "InterestingProgram";
-
-int progPID = 42;
-
-const char\* progArgv[] = {"InterestingProgram", "-h", NULL};
-
-accessType_t mode = create;
-
-// Create/attach/open a binary
-
-BPatch_addressSpace\* app =
-
-startInstrumenting(mode, progName, progPID, progArgv);
-
-if (!app) {
-
-fprintf(stderr, "startInstrumenting failed\n");
-
-exit(1);
-
-}
-
-// Instrument memory accesses
-
-if (!instrumentMemoryAccesses(app)) {
-
-fprintf(stderr, "instrumentMemoryAccesses failed\n");
-
-exit(1);
-
-}
-
-// Finish instrumentation
-
-const char\* progName2 = "InterestingProgram-rewritten";
-
-finishInstrumenting(app, progName2);
-
-}
+.. code-block:: cpp
+
+   #include "BPatch.h"
+   #include "BPatch_addressSpace.h"
+   #include "BPatch_binaryEdit.h"
+   #include "BPatch_function.h"
+   #include "BPatch_point.h"
+   #include "BPatch_process.h"
+   #include <stdio.h>
+   
+   using namespace std;
+   using namespace Dyninst;
+   
+   // Create an instance of class BPatch
+   BPatch bpatch;
+   
+   // Different ways to perform instrumentation
+   typedef enum { create, attach, open } accessType_t;
+   
+   // Attach, create, or open a file for rewriting
+   BPatch_addressSpace *startInstrumenting(accessType_t accessType,
+                                           const char *name, int pid,
+                                           const char *argv[]) {
+     BPatch_addressSpace *handle = NULL;
+     switch (accessType) {
+     case create:
+       handle = bpatch.processCreate(name, argv);
+       if (!handle) {
+         fprintf(stderr, "processCreate failed\n");
+       }
+       break;
+     case attach:
+       handle = bpatch.processAttach(name, pid);
+       if (!handle) {
+         fprintf(stderr, "processAttach failed\n");
+       }
+       break;
+     case open:
+       // Open the binary file; do not open dependencies
+       handle = bpatch.openBinary(name, false);
+       if (!handle) {
+         fprintf(stderr, "openBinary failed\n");
+       }
+       break;
+     }
+     return handle;
+   }
+   
+   bool instrumentMemoryAccesses(BPatch_addressSpace *app) {
+     BPatch_image *appImage = app->getImage();
+     
+     // We're interested in loads and stores
+     BPatch_Set<BPatch_opCode> axs;
+     axs.insert(BPatch_opLoad);
+     axs.insert(BPatch_opStore);
+     
+     // Scan the function InterestingProcedure
+     // and create instrumentation points
+     std::vector<BPatch_function *> functions;
+     appImage->findFunction("InterestingProcedure", functions);
+     std::vector<BPatch_point *> *points = functions[0]->findPoint(axs);
+     if (!points) {
+       fprintf(stderr, "No load/store points found\n");
+       return false;
+     }
+     
+     // Create the printf function call snippet
+     std::vector<BPatch_snippet *> printfArgs;
+     BPatch_snippet *fmt = new BPatch_constExpr("Access at: 0x%lx\n");
+     printfArgs.push_back(fmt);
+     BPatch_snippet *eae = new BPatch_effectiveAddressExpr();
+     printfArgs.push_back(eae);
+     
+     // Find the printf function
+     std::vector<BPatch_function *> printfFuncs;
+     appImage->findFunction("printf", printfFuncs);
+     if (printfFuncs.size() == 0) {
+       fprintf(stderr, "Could not find printf\n");
+       return false;
+     }
+     
+     // Construct a function call snippet
+     BPatch_funcCallExpr printfCall(*(printfFuncs[0]), printfArgs);
+     // Insert the snippet at the instrumentation points
+     if (!app->insertSnippet(printfCall, *points)) {
+       fprintf(stderr, "insertSnippet failed\n");
+       return false;
+     }
+     return true;
+   }
+
+   void finishInstrumenting(BPatch_addressSpace *app, const char *newName) {
+     BPatch_process *appProc = dynamic_cast<BPatch_process *>(app);
+     BPatch_binaryEdit *appBin = dynamic_cast<BPatch_binaryEdit *>(app);
+     if (appProc) {
+       if (!appProc->continueExecution()) {
+         fprintf(stderr, "continueExecution failed\n");
+       }
+       while (!appProc->isTerminated()) {
+         bpatch.waitForStatusChange();
+       }
+     } else if (appBin) {
+       if (!appBin->writeFile(newName)) {
+         fprintf(stderr, "writeFile failed\n");
+       }
+     }
+   }
+   int main() {
+     // Set up information about the program to be instrumented
+     const char *progName = "InterestingProgram";
+     int progPID = 42;
+     const char *progArgv[] = {"InterestingProgram", "-h", NULL};
+     accessType_t mode = create;
+     // Create/attach/open a binary
+     BPatch_addressSpace *app =
+         startInstrumenting(mode, progName, progPID, progArgv);
+     if (!app) {
+       fprintf(stderr, "startInstrumenting failed\n");
+       exit(1);
+     }
+     // Instrument memory accesses
+     if (!instrumentMemoryAccesses(app)) {
+       fprintf(stderr, "instrumentMemoryAccesses failed\n");
+       exit(1);
+     }
+     // Finish instrumentation
+     const char *progName2 = "InterestingProgram-rewritten";
+     finishInstrumenting(app, progName2);
+   }
 
 retee
 -----
 
-The final example is a program called “re-tee.” It takes three
+The final example is a program called "re-tee." It takes three
 arguments: the pathname of an executable program, the process id of a
 running instance of the same program, and a file name. It adds code to
 the running program that copies to the named file all output that the
 program writes to its standard output file descriptor. In this way it
-works like “tee,” which passes output along to its own standard out
+works like "tee," which passes output along to its own standard out
 while also saving it in a file. The motivation for the example program
 is that you run a program, and it starts to print copious lines of
 output to your screen, and you wish to save that output in a file
 without having to re-run the program.
 
-#include <stdio.h>
-
-#include <fcntl.h>
-
-#include <vector>
-
-#include "BPatch.h"
-
-#include "BPatch_point.h"
-
-#include "BPatch_process.h"
-
-#include "BPatch_function.h"
-
-#include "BPatch_thread.h"
-
-/\*
-
-\* retee.C
-
-\*
-
-\* This program (mutator) provides an example of several facets of
-
-\* Dyninst's behavior, and is a good basis for many Dyninst
-
-\* mutators. We want to intercept all output from a target application
-
-\* (the mutatee), duplicating output to a file as well as the
-
-\* original destination (e.g., stdout).
-
-\*
-
-\* This mutator operates in several phases. In brief:
-
-\* 1) Attach to the running process and get a handle (BPatch_process
-
-\* object)
-
-\* 2) Get a handle for the parsed image of the mutatee for function
-
-\* lookup (BPatch_image object)
-
-\* 3) Open a file for output
-
-\* 3a) Look up the "open" function
-
-\* 3b) Build a code snippet to call open with the file name.
-
-\* 3c) Run that code snippet via a oneTimeCode, saving the returned
-
-\* file descriptor
-
-\* 4) Write the returned file descriptor into a memory variable for
-
-\* mutatee-side use
-
-\* 5) Build a snippet that copies output to the file
-
-\* 5a) Locate the "write" library call
-
-\* 5b) Access its parameters
-
-\* 5c) Build a snippet calling write(fd, parameters)
-
-\* 5d) Insert the snippet at write
-
-\* 6) Add a hook to exit to ensure that we close the file (using
-
-\* a callback at exit and another oneTimeCode)
-
-\*/
-
-void usage() {
-
-fprintf(stderr, "Usage: retee <process pid> <filename>\n");
-
-fprintf(stderr, " note: <filename> is relative to the application
-process.\n");
-
-}
-
-// We need to use a callback, and so the things that callback requires
-
-// are made global - this includes the file descriptor snippet (see
-below)
-
-BPatch_variableExpr \*fdVar = NULL;
-
-// Before we add instrumentation, we need to open the file for
-
-// writing. We can do this with a oneTimeCode - a piece of code run at
-
-// a particular time, rather than at a particular location.
-
-int openFileForWrite(BPatch_process \*app, BPatch_image \*appImage, char
-\*fileName) {
-
-// The code to be generated is:
-
-// fd = open(argv[2], O_WRONLY|O_CREAT, 0666);
-
-// (1) Find the open function
-
-std::vector<BPatch_function \*>openFuncs;
-
-appImage->findFunction("open", openFuncs);
-
-if (openFuncs.size() == 0) {
-
-fprintf(stderr, "ERROR: Unable to find function for open()\n");
-
-return -1;
-
-}
-
-// (2) Allocate a vector of snippets for the parameters to open
-
-std::vector<BPatch_snippet \*> openArgs;
-
-// (3) Create a string constant expression from argv[3]
-
-BPatch_constExpr fileNameExpr(fileName);
-
-// (4) Create two more constant expressions \_WRONLY|O_CREAT and 0666
-
-BPatch_constExpr fileFlagsExpr(O_WRONLY|O_CREAT);
-
-BPatch_constExpr fileModeExpr(0666);
-
-// (5) Push 3 & 4 onto the list from step 2, push first to last
-parameter.
-
-openArgs.push_back(&fileNameExpr);
-
-openArgs.push_back(&fileFlagsExpr);
-
-openArgs.push_back(&fileModeExpr);
-
-// (6) create a procedure call using function found at 1 and
-
-// parameters from step 5.
-
-BPatch_funcCallExpr openCall(*openFuncs[0], openArgs);
-
-// (7) The oneTimeCode returns whatever the return result from
-
-// the BPatch_snippet is. In this case, the return result of
-
-// open -> the file descriptor.
-
-void \*openFD = app->oneTimeCode( openCall );
-
-// oneTimeCode returns a void \*, and we want an int file handle
-
-return (int) (long) openFD;
-
-}
-
-// We have used a oneTimeCode to open the file descriptor. However,
-
-// this returns the file descriptor to the mutator - the mutatee has
-
-// no idea what the descriptor is. We need to allocate a variable in
-
-// the mutatee to hold this value for future use and copy the
-
-// (mutator-side) value into the mutatee variable.
-
-// Note: there are alternatives to this technique. We could have
-
-// allocated the variable before the oneTimeCode and augmented the
-
-// snippet to do the assignment. We could also write the file
-
-// descriptor as a constant into any inserted instrumentation.
-
-BPatch_variableExpr \*writeFileDescIntoMutatee(BPatch_process \*app,
-
-BPatch_image \*appImage,
-
-int fileDescriptor) {
-
-// (1) Allocate a variable in the mutatee of size (and type) int
-
-BPatch_variableExpr \*fdVar = app->malloc(*appImage->findType("int"));
-
-if (fdVar == NULL) return NULL;
-
-// (2) Write the value into the variable
-
-// Like memcpy, writeValue takes a pointer
-
-// The third parameter is for functionality called "saveTheWorld",
-
-// which we don't worry about here (and so is false)
-
-bool ret = fdVar->writeValue((void \*) &fileDescriptor, sizeof(int),
-
-false);
-
-if (ret == false) return NULL;
-
-return fdVar;
-
-}
-
-// We now have an open file descriptor in the mutatee. We want to
-
-// instrument write to intercept and copy the output. That happens
-
-// here.
-
-bool interceptAndCloneWrite(BPatch_process \*app,
-
-BPatch_image \*appImage,
-
-BPatch_variableExpr \*fdVar) {
-
-// (1) Locate the write call
-
-std::vector<BPatch_function \*> writeFuncs;
-
-appImage->findFunction("write",
-
-writeFuncs);
-
-if(writeFuncs.size() == 0) {
-
-fprintf(stderr, "ERROR: Unable to find function for write()\n");
-
-return false;
-
-}
-
-// (2) Build the call to (our) write. Arguments are:
-
-// ours: fdVar (file descriptor)
-
-// parameter: buffer
-
-// parameter: buffer size
-
-// Declare a vector to hold these.
-
-std::vector<BPatch_snippet \*> writeArgs;
-
-// Push on the file descriptor
-
-writeArgs.push_back(fdVar);
-
-// Well, we need the buffer... but that's a parameter to the
-
-// function we're implementing. That's not a problem - we can grab
-
-// it out with a BPatch_paramExpr.
-
-BPatch_paramExpr buffer(1); // Second (0, 1, 2) argument
-
-BPatch_paramExpr bufferSize(2);
-
-writeArgs.push_back(&buffer);
-
-writeArgs.push_back(&bufferSize);
-
-// And build the write call
-
-BPatch_funcCallExpr writeCall(*writeFuncs[0], writeArgs);
-
-// (3) Identify the BPatch_point for the entry of write. We're
-
-// instrumenting the function with itself; normally the findPoint
-
-// call would operate off a different function than the snippet.
-
-std::vector<BPatch_point \*> \*points;
-
-points = writeFuncs[0]->findPoint(BPatch_entry);
-
-if ((*points).size() == 0) {
-
-return false;
-
-}
-
-// (4) Insert the snippet at the start of write
-
-return app->insertSnippet(writeCall, \*points);
-
-// Note: we have just instrumented write() with a call to
-
-// write(). This would ordinarily be a \_bad thing_, as there is
-
-// nothing to stop infinite recursion - write -> instrumentation
-
-// -> write -> instrumentation....
-
-// However, Dyninst uses a feature called a "tramp guard" to
-
-// prevent this, and it's on by default.
-
-}
-
-// This function is called as an exit callback (that is, called
-
-// immediately before the process exits when we can still affect it)
-
-// and thus must match the exit callback signature:
-
-//
-
-// typedef void (*BPatchExitCallback) (BPatch_thread \*,
-BPatch_exitType)
-
-//
-
-// Note that the callback gives us a thread, and we want a process - but
-
-// each thread has an up pointer.
-
-void closeFile(BPatch_thread \*thread, BPatch_exitType) {
-
-fprintf(stderr, "Exit callback called for process...\n");
-
-// (1) Get the BPatch_process and BPatch_images
-
-BPatch_process \*app = thread->getProcess();
-
-BPatch_image \*appImage = app->getImage();
-
-// The code to be generated is:
-
-// close(fd);
-
-// (2) Find close
-
-std::vector<BPatch_function \*> closeFuncs;
-
-appImage->findFunction("close", closeFuncs);
-
-if (closeFuncs.size() == 0) {
-
-fprintf(stderr, "ERROR: Unable to find function for close()\n");
-
-return;
-
-}
-
-// (3) Allocate a vector of snippets for the parameters to open
-
-std::vector<BPatch_snippet \*> closeArgs;
-
-// (4) Add the fd snippet - fdVar is global since we can't
-
-// get it via the callback
-
-closeArgs.push_back(fdVar);
-
-// (5) create a procedure call using function found at 1 and
-
-// parameters from step 3.
-
-BPatch_funcCallExpr closeCall(*closeFuncs[0], closeArgs);
-
-// (6) Use a oneTimeCode to close the file
-
-app->oneTimeCode( closeCall );
-
-// (7) Tell the app to continue to finish it off.
-
-app->continueExecution();
-
-return;
-
-}
-
-BPatch bpatch;
-
-// In main we perform the following operations.
-
-// 1) Attach to the process and get BPatch_process and BPatch_image
-
-// handles
-
-// 2) Open a file descriptor
-
-// 3) Instrument write
-
-// 4) Continue the process and wait for it to terminate
-
-int main(int argc, char \*argv[]) {
-
-int pid;
-
-if (argc != 3) {
-
-usage();
-
-exit(1);
-
-}
-
-pid = atoi(argv[1]);
-
-// Attach to the program - we can attach with just a pid; the
-
-// program name is no longer necessary
-
-fprintf(stderr, "Attaching to process %d...\n", pid);
-
-BPatch_process \*app = bpatch.processAttach(NULL, pid);
-
-if (!app) return -1;
-
-// Read the program's image and get an associated image object
-
-BPatch_image \*appImage = app->getImage();
-
-std::vector<BPatch_function*> writeFuncs;
-
-fprintf(stderr, "Opening file %s for write...\n", argv[2]);
-
-int fileDescriptor = openFileForWrite(app, appImage, argv[2]);
-
-if (fileDescriptor == -1) {
-
-fprintf(stderr, "ERROR: opening file %s for write failed\n",
-
-argv[2]);
-
-exit(1);
-
-}
-
-fprintf(stderr, "Writing returned file descriptor %d into"
-
-"mutatee...\n", fileDescriptor);
-
-// This was defined globally as the exit callback needs it.
-
-fdVar = writeFileDescIntoMutatee(app, appImage, fileDescriptor);
-
-if (fdVar == NULL) {
-
-fprintf(stderr, "ERROR: failed to write mutatee-side variable\n");
-
-exit(1);
-
-}
-
-fprintf(stderr, "Instrumenting write...\n");
-
-bool ret = interceptAndCloneWrite(app, appImage, fdVar);
-
-if (!ret) {
-
-fprintf(stderr, "ERROR: failed to instrument mutatee\n");
-
-exit(1);
-
-}
-
-fprintf(stderr, "Adding exit callback...\n");
-
-bpatch.registerExitCallback(closeFile);
-
-// Continue the execution...
-
-fprintf(stderr, "Continuing execution and waiting for termination\n");
-
-app->continueExecution();
-
-while (!app->isTerminated())
-
-bpatch.waitForStatusChange();
-
-printf("Done.\n");
-
-return 0;
-
-}
-
-Appendix C - Common pitfalls
-============================
-
-This appendix is designed to point out some common pitfalls that users
-have reported when using the Dyninst system. Many of these are either
-due to limitations in the current implementations, or reflect design
-decisions that may not produce the expected behavior from the system.
-
-**Attach followed by detach**
-
-If a mutator attaches to a mutatee, and immediately exits, the current
-behavior is that the mutatee is left suspended. To make sure the
-application continues, call detach with the appropriate flags.
-
-**Attaching to a program that has already been modified by Dyninst**
-
-If a mutator attaches to a program that has already been modified by a
-previous mutator, a warning message will be issued. We are working to
-fix this problem, but the correct semantics are still being specified.
-Currently, a message is printed to indicate that this has been
-attempted, and the attach will fail.
-
-**Dyninst is event-driven**
-
-Dyninst must sometimes handle events that take place in the mutatee, for
-instance when a new shared library is loaded, or when the mutatee
-executes a fork or exec. Dyninst handles events when it checks the
-status of the mutatee, so to allow this the mutator should periodically
-call one of the functions BPatch::pollForStatusChange,
-BPatch::wait­ForStatusChange, BPatch_thread::isStopped, or
-BPatch_­thread::is­Termin­ated.
+.. code-block:: cpp
+
+   #include "BPatch.h"
+   #include "BPatch_function.h"
+   #include "BPatch_point.h"
+   #include "BPatch_process.h"
+   #include "BPatch_thread.h"
+   #include <fcntl.h>
+   #include <stdio.h>
+   #include <vector>
+   
+   /*
+    * retee.C
+    *
+    * This program (mutator) provides an example of several facets of
+    * Dyninst's behavior, and is a good basis for many Dyninst
+    * mutators. We want to intercept all output from a target application
+    * (the mutatee), duplicating output to a file as well as the
+    * original destination (e.g., stdout).
+    *
+    * This mutator operates in several phases. In brief:
+    * 1) Attach to the running process and get a handle (BPatch_process
+    * object)
+    * 2) Get a handle for the parsed image of the mutatee for function
+    * lookup (BPatch_image object)
+    * 3) Open a file for output
+    * 3a) Look up the "open" function
+    * 3b) Build a code snippet to call open with the file name.
+    * 3c) Run that code snippet via a oneTimeCode, saving the returned
+    * file descriptor
+    * 4) Write the returned file descriptor into a memory variable for
+    * mutatee-side use
+    * 5) Build a snippet that copies output to the file
+    * 5a) Locate the "write" library call
+    * 5b) Access its parameters
+    * 5c) Build a snippet calling write(fd, parameters)
+    * 5d) Insert the snippet at write
+    * 6) Add a hook to exit to ensure that we close the file (using
+    * a callback at exit and another oneTimeCode)
+    */
+   void usage() {
+     fprintf(stderr, "Usage: retee <process pid> <filename>\n");
+     fprintf(stderr, " note: <filename> is relative to the application process.\n");
+   }
+   // We need to use a callback, and so the things that callback requires
+   // are made global - this includes the file descriptor snippet (see below)
+   BPatch_variableExpr *fdVar = NULL;
+   // Before we add instrumentation, we need to open the file for
+   // writing. We can do this with a oneTimeCode - a piece of code run at
+   // a particular time, rather than at a particular location.
+   int openFileForWrite(BPatch_process *app, BPatch_image *appImage,
+                        char *fileName) {
+     // The code to be generated is:
+     // fd = open(argv[2], O_WRONLY|O_CREAT, 0666);
+     // (1) Find the open function
+     std::vector<BPatch_function *> openFuncs;
+     appImage->findFunction("open", openFuncs);
+     if (openFuncs.size() == 0) {
+       fprintf(stderr, "ERROR: Unable to find function for open()\n");
+       return -1;
+     }
+     // (2) Allocate a vector of snippets for the parameters to open
+     std::vector<BPatch_snippet *> openArgs;
+     // (3) Create a string constant expression from argv[3]
+     BPatch_constExpr fileNameExpr(fileName);
+     // (4) Create two more constant expressions _WRONLY|O_CREAT and 0666
+     BPatch_constExpr fileFlagsExpr(O_WRONLY | O_CREAT);
+     BPatch_constExpr fileModeExpr(0666);
+     // (5) Push 3 & 4 onto the list from step 2, push first to last
+     parameter.openArgs.push_back(&fileNameExpr);
+     openArgs.push_back(&fileFlagsExpr);
+     openArgs.push_back(&fileModeExpr);
+     // (6) create a procedure call using function found at 1 and
+     // parameters from step 5.
+     BPatch_funcCallExpr openCall(*openFuncs[0], openArgs);
+     // (7) The oneTimeCode returns whatever the return result from
+     // the BPatch_snippet is. In this case, the return result of
+     // open -> the file descriptor.
+     void *openFD = app->oneTimeCode(openCall);
+     // oneTimeCode returns a void *, and we want an int file handle
+     return (int)(long)openFD;
+   }
+   // We have used a oneTimeCode to open the file descriptor. However,
+   // this returns the file descriptor to the mutator - the mutatee has
+   // no idea what the descriptor is. We need to allocate a variable in
+   // the mutatee to hold this value for future use and copy the
+   // (mutator-side) value into the mutatee variable.
+   // Note: there are alternatives to this technique. We could have
+   // allocated the variable before the oneTimeCode and augmented the
+   // snippet to do the assignment. We could also write the file
+   // descriptor as a constant into any inserted instrumentation.
+   BPatch_variableExpr *writeFileDescIntoMutatee(BPatch_process *app,
+                                                 BPatch_image *appImage,
+                                                 int fileDescriptor) {
+     // (1) Allocate a variable in the mutatee of size (and type) int
+     BPatch_variableExpr *fdVar = app->malloc(*appImage->findType("int"));
+     if (fdVar == NULL)
+       return NULL;
+     // (2) Write the value into the variable
+     // Like memcpy, writeValue takes a pointer
+     // The third parameter is for functionality called "saveTheWorld",
+     // which we don't worry about here (and so is false)
+     bool ret = fdVar->writeValue((void *)&fileDescriptor, sizeof(int), false);
+     if (ret == false)
+       return NULL;
+     return fdVar;
+   }
+   // We now have an open file descriptor in the mutatee. We want to
+   // instrument write to intercept and copy the output. That happens
+   // here.
+   bool interceptAndCloneWrite(BPatch_process *app, BPatch_image *appImage,
+                               BPatch_variableExpr *fdVar) {
+     // (1) Locate the write call
+     std::vector<BPatch_function *> writeFuncs;
+     appImage->findFunction("write", writeFuncs);
+     if (writeFuncs.size() == 0) {
+       fprintf(stderr, "ERROR: Unable to find function for write()\n");
+       return false;
+     }
+     // (2) Build the call to (our) write. Arguments are:
+     // ours: fdVar (file descriptor)
+     // parameter: buffer
+     // parameter: buffer size
+     // Declare a vector to hold these.
+     std::vector<BPatch_snippet *> writeArgs;
+     // Push on the file descriptor
+     writeArgs.push_back(fdVar);
+     // Well, we need the buffer... but that's a parameter to the
+     // function we're implementing. That's not a problem - we can grab
+     // it out with a BPatch_paramExpr.
+     BPatch_paramExpr buffer(1); // Second (0, 1, 2) argument
+     BPatch_paramExpr bufferSize(2);
+     writeArgs.push_back(&buffer);
+     writeArgs.push_back(&bufferSize);
+     // And build the write call
+     BPatch_funcCallExpr writeCall(*writeFuncs[0], writeArgs);
+     // (3) Identify the BPatch_point for the entry of write. We're
+     // instrumenting the function with itself; normally the findPoint
+     // call would operate off a different function than the snippet.
+     std::vector<BPatch_point *> *points;
+     points = writeFuncs[0]->findPoint(BPatch_entry);
+     if ((*points).size() == 0) {
+       return false;
+     }
+     // (4) Insert the snippet at the start of write
+     return app->insertSnippet(writeCall, *points);
+     // Note: we have just instrumented write() with a call to
+     // write(). This would ordinarily be a _bad thing_, as there is
+     // nothing to stop infinite recursion - write -> instrumentation
+     // -> write -> instrumentation....
+     // However, Dyninst uses a feature called a "tramp guard" to
+     // prevent this, and it's on by default.
+   }
+   // This function is called as an exit callback (that is, called
+   // immediately before the process exits when we can still affect it)
+   // and thus must match the exit callback signature:
+   //
+   // typedef void (*BPatchExitCallback) (BPatch_thread *, BPatch_exitType)
+   //
+   // Note that the callback gives us a thread, and we want a process - but
+   // each thread has an up pointer.
+   void closeFile(BPatch_thread *thread, BPatch_exitType) {
+     fprintf(stderr, "Exit callback called for process...\n");
+     // (1) Get the BPatch_process and BPatch_images
+     BPatch_process *app = thread->getProcess();
+     BPatch_image *appImage = app->getImage();
+     // The code to be generated is:
+     // close(fd);
+     // (2) Find close
+     std::vector<BPatch_function *> closeFuncs;
+     appImage->findFunction("close", closeFuncs);
+     if (closeFuncs.size() == 0) {
+       fprintf(stderr, "ERROR: Unable to find function for close()\n");
+       return;
+     }
+     // (3) Allocate a vector of snippets for the parameters to open
+     std::vector<BPatch_snippet *> closeArgs;
+     // (4) Add the fd snippet - fdVar is global since we can't
+     // get it via the callback
+     closeArgs.push_back(fdVar);
+     // (5) create a procedure call using function found at 1 and
+     // parameters from step 3.
+     BPatch_funcCallExpr closeCall(*closeFuncs[0], closeArgs);
+     // (6) Use a oneTimeCode to close the file
+     app->oneTimeCode(closeCall);
+     // (7) Tell the app to continue to finish it off.
+     app->continueExecution();
+     return;
+   }
+   BPatch bpatch;
+   // In main we perform the following operations.
+   // 1) Attach to the process and get BPatch_process and BPatch_image
+   // handles
+   // 2) Open a file descriptor
+   // 3) Instrument write
+   // 4) Continue the process and wait for it to terminate
+   int main(int argc, char *argv[]) {
+     int pid;
+     if (argc != 3) {
+       usage();
+       exit(1);
+     }
+     pid = atoi(argv[1]);
+     // Attach to the program - we can attach with just a pid; the
+     // program name is no longer necessary
+     fprintf(stderr, "Attaching to process %d...\n", pid);
+     BPatch_process *app = bpatch.processAttach(NULL, pid);
+     if (!app)
+       return -1;
+     // Read the program's image and get an associated image object
+     BPatch_image *appImage = app->getImage();
+     std::vector<BPatch_function *> writeFuncs;
+     fprintf(stderr, "Opening file %s for write...\n", argv[2]);
+     int fileDescriptor = openFileForWrite(app, appImage, argv[2]);
+     if (fileDescriptor == -1) {
+       fprintf(stderr, "ERROR: opening file %s for write failed\n", argv[2]);
+       exit(1);
+     }
+     fprintf(stderr,
+             "Writing returned file descriptor %d into"
+             "mutatee...\n",
+             fileDescriptor);
+     // This was defined globally as the exit callback needs it.
+     fdVar = writeFileDescIntoMutatee(app, appImage, fileDescriptor);
+     if (fdVar == NULL) {
+       fprintf(stderr, "ERROR: failed to write mutatee-side variable\n");
+       exit(1);
+     }
+     fprintf(stderr, "Instrumenting write...\n");
+     bool ret = interceptAndCloneWrite(app, appImage, fdVar);
+     if (!ret) {
+       fprintf(stderr, "ERROR: failed to instrument mutatee\n");
+       exit(1);
+     }
+     fprintf(stderr, "Adding exit callback...\n");
+     bpatch.registerExitCallback(closeFile);
+     // Continue the execution...
+     fprintf(stderr, "Continuing execution and waiting for termination\n");
+     app->continueExecution();
+     while (!app->isTerminated())
+       bpatch.waitForStatusChange();
+     printf("Done.\n");
+     return 0;
+   }
