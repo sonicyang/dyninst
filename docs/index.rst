@@ -21,6 +21,9 @@ to more effectively use different aspects of binary analysis for building their 
    Trace the flow of data through a binary using the techniques of slicing, stack analysis,
    symbolic expansion and evaluation, and register liveness
 
+:ref:`sec:dyninstapi-intro`
+   An interface for instrumenting and working with binaries and processes
+
 :ref:`sec:instruction-intro`
    Decode raw binary instructions into a platform-independent represention that provides
    a description of their semantics 
@@ -32,6 +35,9 @@ to more effectively use different aspects of binary analysis for building their 
 :ref:`sec-patchapi-intro`
    Instrument (insert code into) and modify a binary executable or library by manipulating
    the binary’s control flow graph (CFG)
+
+:ref:`sec:proccontrolapi-intro`
+   An API and library for controlling processes
 
 :ref:`sec:stackwalk-intro`
    Collect and analyze stack traces

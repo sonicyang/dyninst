@@ -1,3 +1,4 @@
+.. _`sec:proccontrolapi-intro`:
 
 ==============
 ProcControlAPI
