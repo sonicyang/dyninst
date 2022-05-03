@@ -86,6 +86,7 @@ Developed by
    overview
    building
    optimizations
+   pitfalls
 
 .. toctree::
    :caption: toolkits 
