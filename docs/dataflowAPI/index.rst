@@ -94,11 +94,12 @@ Slicing
 
 The following example uses DataflowAPI to perform a backward slice on an
 indirect jump instruction to determine the instructions that affect the
-calculation of the jump target. The goal of this example is to show (1)
-how to convert an instruction to assignments; (2) how to perform slicing
-on a given assignment; (3) how to extend the default
-``Slicer::Predicates`` and write call back functions to control the
-behavior of slicing.
+calculation of the jump target. The goal of this example is to show
+
+   1) how to convert an instruction to assignments
+   2) how to perform slicing on a given assignment
+   3) how to extend the default ``Slicer::Predicates`` and write call back functions to control the behavior of slicing.
+
 
 .. code-block:: cpp
 
