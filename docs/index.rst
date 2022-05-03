@@ -85,6 +85,7 @@ Developed by
 
    overview
    building
+   optimizations
 
 .. toctree::
    :caption: toolkits 
