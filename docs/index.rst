@@ -90,6 +90,19 @@ Developed by
    pitfalls
 
 .. toctree::
+   :caption: examples
+   :name: examples
+   :hidden:
+   :maxdepth: 2
+   
+   examples/binary_analysis
+   examples/cfg
+   examples/function_disassembly
+   examples/instrument_function
+   examples/memory_access
+   examples/retee
+   
+.. toctree::
    :caption: toolkits 
    :name: toolkits
    :hidden:
