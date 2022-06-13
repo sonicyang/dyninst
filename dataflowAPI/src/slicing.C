@@ -1,28 +1,28 @@
 /*
  * See the dyninst/COPYRIGHT file for copyright information.
- * 
+ *
  * We provide the Paradyn Tools (below described as "Paradyn")
  * on an AS IS basis, and do not warrant its validity or performance.
  * We reserve the right to update, modify, or discontinue this
  * software at any time.  We shall have no obligation to supply such
  * updates or modifications or any other form of support to you.
- * 
+ *
  * By your use of Paradyn, you understand and agree that we (or any
  * other person or entity with proprietary rights in Paradyn) are
  * under no obligation to provide either maintenance services,
  * update services, notices of latent defects, or correction of
  * defects for Paradyn.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
@@ -64,7 +64,7 @@ bool containsRet(ParseAPI::Block *);
 ParseAPI::Function *getEntryFunc(ParseAPI::Block *);
 
 /* An algorithm to generate a slice graph.
- 
+
 The slice graph is a directed graph that consists of nodes
 corresponding to assignments from a set of inputs to an
 output, where each input or output is an `abstract region'
@@ -99,36 +99,36 @@ Because CFGs are loopy directeg graphs, however, this does
 not lead to an optimimal search ordering; it is possible to
 construct pathological cases in which down-slice edges are
 visited multiple times due to novel AbsRegions arising on
-different paths. The caching of down-slice AbsRegions only 
+different paths. The caching of down-slice AbsRegions only
 guarantees that a particular AbsRegion is only searched for
 once along a given path---the loopy nature of the graph
 prevents optimal search stragegies such as a topologically
-sorted ordering that would be possible in a DAG. 
+sorted ordering that would be possible in a DAG.
 
 The algorithm goes more or less like this:
 
-   A_0 <- initial assignment 
+   A_0 <- initial assignment
    F <- initialize frame from active AbsRegions in A_0
    // F contains `active' set of AbsRegions
-   
+
    sliceInternalAux( F ) :
-     
+
       // find assignments in the current instruction,
       // add them to the graph if appropriate, update
       // the active set:
       // active <- active \ killed U matches
       updateAndLink(F)
-  
-      // `successor' is direction-appropriate 
+
+      // `successor' is direction-appropriate
       foreach successor NF of F
-         if visited(F->NF) // edge visited    
-            
+         if visited(F->NF) // edge visited
+
             // try to add assignments cached from down-slice
             updateAndLinkFromCache(NF)
-            
+
             // remove AbsRegions that have been visited
             // along this edge from the active set
-            removeBlocked(NF) 
+            removeBlocked(NF)
 
             // active is empty unless this instruction
             // introduced new active regions (in
@@ -156,30 +156,42 @@ Slicer::sliceInternal(
     SliceFrame initFrame;
     map<CacheEdge, set<AbsRegion> > visited;
 
-    // this is the unified cache aka the cache that will hold 
+    slicing_printf("SliceInternal With %s\n",
+        a_->format().c_str());
+
+    // this is the unified cache aka the cache that will hold
     // the merged set of 'defs'.
     unordered_map<Address,DefCache> cache;
 
     // this is the single cache aka the cache that holds
-    // only the 'defs' from a single instruction. 
-    unordered_map<Address, DefCache> singleCache; 
-    
+    // only the 'defs' from a single instruction.
+    unordered_map<Address, DefCache> singleCache;
+
     ret = Graph::createGraph();
+
+    slicing_printf("SliceInternal 2 With %s\n",
+        a_->format().c_str());
 
     // set up a slicing frame describing with the
     // relevant context
     constructInitialFrame(dir,initFrame);
 
+    slicing_printf("SliceInternal 3 With %s\n",
+        a_->format().c_str());
+
     // note that the AbsRegion in this Element *does not matter*;
     // we just need the block, function and assignment
     aP = createNode(Element(b_,f_,a_->out(),a_));
+
+    slicing_printf("SliceInternal 4 With %s\n",
+        a_->format().c_str());
 
     if(dir == forward) {
         slicing_printf("Inserting entry node %p/%s\n",
             aP.get(),aP->format().c_str());
     } else {
-        slicing_printf("Inserting exit node %p/%s\n",
-            aP.get(),aP->format().c_str());
+        slicing_printf("Inserting exit node %p/%s/%s\n",
+            aP.get(),aP->format().c_str(), a_->format().c_str());
     }
 
     // add to graph
@@ -189,7 +201,7 @@ Slicer::sliceInternal(
         // the set may be redundant, but speeds up the loopless case.
         addrStack.push_back(initFrame.addr());
         addrSet.insert(initFrame.addr());
-	
+
 	slicing_printf("Starting recursive slicing\n");
 	sliceInternalAux(ret,dir,p,initFrame,true,visited, singleCache, cache);
 	slicing_printf("Finished recursive slicing\n");
@@ -197,13 +209,13 @@ Slicer::sliceInternal(
 
 
     // promote any remaining plausible nodes.
-    promotePlausibleNodes(ret, dir); 
+    promotePlausibleNodes(ret, dir);
 
     cleanGraph(ret);
     return ret;
 }
 
-// main slicing routine. creates any new edges if they are part of the 
+// main slicing routine. creates any new edges if they are part of the
 // slice, and recursively slices on the next isntruction(s).
 void Slicer::sliceInternalAux(
     Graph::Ptr g,
@@ -212,7 +224,7 @@ void Slicer::sliceInternalAux(
     SliceFrame &cand,
     bool skip,              // skip linking this frame; for bootstrapping
     map<CacheEdge,set<AbsRegion> > & visited,
-    unordered_map<Address, DefCache>& singleCache, 
+    unordered_map<Address, DefCache>& singleCache,
     unordered_map<Address,DefCache> & cache)
 {
     vector<SliceFrame> nextCands;
@@ -230,7 +242,7 @@ void Slicer::sliceInternalAux(
         if (!updateAndLink(g,dir,cand, mydefs, p)) return;
 	    slicing_printf("\t\tfinished udpateAndLink, active.size: %ld\n",
                        cand.active.size());
-        // If the analysis that uses the slicing can stop for 
+        // If the analysis that uses the slicing can stop for
 	// analysis specifc reasons on a path, the cache
 	// may or may not contain the complete dependence for a
 	// visited edge. The analysis should decide whether to use
@@ -311,7 +323,7 @@ void Slicer::sliceInternalAux(
 	        cache[cand.addr()].merge(cache[f.addr()]);
         }
     }
-    
+
     // promote plausible entry/exit nodes if this is end of recursion.
     if (nextCands.size() == 0) {
         promotePlausibleNodes(g, dir);
@@ -359,7 +371,7 @@ Slicer::markVisited(
     }
 }
 
-// converts the current instruction into assignments and looks for matching 
+// converts the current instruction into assignments and looks for matching
 // elements in the active map. if any are found, graph nodes and edges are
 // created. this function also updates the active map to be contain only the
 // elements that are valid after the above linking (killed defs are removed).
@@ -390,7 +402,7 @@ bool Slicer::updateAndLink(
         SliceFrame::ActiveMap::iterator ait = cand.active.begin();
         unsigned j=0;
         for( ; ait != cand.active.end(); ++ait,++j) {
-            if (findMatch(g,dir,cand,(*ait).first,assns[i],matches, cache)) { // links	  
+            if (findMatch(g,dir,cand,(*ait).first,assns[i],matches, cache)) { // links
 	        if (!p.addNodeCallback(assns[i], visitedEdges)) return false;
 	    }
 	    killed[j] = killed[j] || kills((*ait).first,assns[i]);
@@ -419,7 +431,7 @@ bool Slicer::updateAndLink(
                         vf != vl; ++vf) {
                     plausibleNodes.erase(createNode(*vf));
                 }
-                
+
             }
             SliceFrame::ActiveMap::iterator del = ait;
             ++ait;
@@ -450,7 +462,7 @@ bool Slicer::updateAndLink(
 void Slicer::updateAndLinkFromCache(
     Graph::Ptr g,
     Direction dir,
-    SliceFrame & f, 
+    SliceFrame & f,
     DefCache & cache)
 {
     SliceFrame::ActiveMap::iterator ait = f.active.begin();
@@ -465,7 +477,7 @@ void Slicer::updateAndLinkFromCache(
             continue;
         }
 
-        // Link them up 
+        // Link them up
         vector<Element> const& eles = (*ait).second;
         set<Def> const& defs = cache.get(r);
         set<Def>::const_iterator dit = defs.begin();
@@ -524,7 +536,7 @@ Slicer::findMatch(
         vector<AbsRegion> const& inputs = assn->inputs();
         for(unsigned i=0;i<inputs.size();++i) {
             if(reg.contains(inputs[i])) {
-                hadmatch = true;    
+                hadmatch = true;
 				slicing_cerr << "\t\t\t Match!" << endl;
                 // Link the assignments associated with this
                 // abstract region (may be > 1)
@@ -532,7 +544,7 @@ Slicer::findMatch(
 
                 // Cache
                 cache.get(reg).insert( Def(ne,inputs[i]) );
-                
+
                 vector<Element> const& eles = cand.active.find(reg)->second;
                 for(unsigned j=0;j<eles.size();++j) {
                     insertPair(g,dir,eles[j],ne,inputs[i]);
@@ -555,7 +567,7 @@ Slicer::findMatch(
 
             // Link the assignments associated with this
             // abstract region (may be > 1)
-            Element ne(cand.loc.block,cand.loc.func,reg,assn); 
+            Element ne(cand.loc.block,cand.loc.func,reg,assn);
 
             // Cache
             cache.get(reg).insert( Def(ne,reg) );
@@ -576,7 +588,7 @@ Slicer::findMatch(
                     insertPair(g,dir,eles[i],ne,eles[i].reg);
             }
 
-            // In this case, we are now interested in the 
+            // In this case, we are now interested in the
             // _inputs_ to the assignment
             vector<AbsRegion> const& inputs = assn->inputs();
             for(unsigned i=0; i< inputs.size(); ++i) {
@@ -598,7 +610,7 @@ Slicer::findMatch(
 }
 
 
-bool 
+bool
 Slicer::getNextCandidates(
     Direction dir,
     Predicates & p,
@@ -617,7 +629,7 @@ Slicer::getNextCandidates(
  * Given the location (instruction) in `cand', find zero or more
  * control flow successors from this location and create new slicing
  * frames for them. Certain types of control flow require mutation of
- * the SliceFrame (modification of context, e.g.) AND mutate the 
+ * the SliceFrame (modification of context, e.g.) AND mutate the
  * abstract regions in the frame's `active' list (e.g. modifying
  * stack locations).
  */
@@ -660,7 +672,7 @@ Slicer::getSuccessors(
     else if(containsRet(cand.loc.block)) {
         slicing_printf("\t\t Handling return... ");
         SliceFrame nf = cand;
-    
+
         // nf may be transformed
         if(handleReturn(p,nf,err)) {
             slicing_printf("success, err: %d\n",err);
@@ -682,7 +694,7 @@ Slicer::getSuccessors(
             if((*eit)->sinkEdge()) {
                 // will force widening
                 newCands.push_back(SliceFrame(false));
-            } 
+            }
             else {
                 SliceFrame nf = cand;
                 slicing_printf("\t\t Handling default edge type %d... ",
@@ -709,10 +721,10 @@ void Slicer::handlePredecessorEdge(ParseAPI::Edge* e,
 {
   visitedEdges.insert(e);
   if (p.ignoreEdge(e)) {
-      slicing_printf("ignore edge from %lx to %lx, type %d according to predicate\n", e->src()->last(), e->trg()->start(), e->type()); 
+      slicing_printf("ignore edge from %lx to %lx, type %d according to predicate\n", e->src()->last(), e->trg()->start(), e->type());
       return ;
   }
-  switch(e->type()) 
+  switch(e->type())
   {
   case CALL:
     slicing_printf("\t\t Handling call... ");
@@ -758,7 +770,7 @@ void Slicer::handlePredecessorEdge(ParseAPI::Edge* e,
 }
 
 
-  
+
 
 /*
  * Same as successors, only backwards
@@ -818,7 +830,7 @@ Slicer::getPredecessors(
     // Case 2: inter-block
     bool err = false;
     SliceFrame nf;
-    
+
     Block::edgelist sources;
     cand.loc.block->copy_sources(sources);
     map< pair<Address, int> , ParseAPI::Edge* > sources_edges;
@@ -828,13 +840,13 @@ Slicer::getPredecessors(
     for (auto eit = sources_edges.begin(); eit != sources_edges.end(); eit++) {
         handlePredecessorEdge(eit->second, p, cand, newCands, err, nf);
     }
-    return !err; 
+    return !err;
 }
 
 /*
  * Process a call instruction, determining whether to follow the
  * call edge (with the help of the predicates) or the fallthrough
- * edge (coloquially referred to as `funlink' thanks to our 
+ * edge (coloquially referred to as `funlink' thanks to our
  * departed Arizona alum --- much respect M.L.)
  */
 bool
@@ -862,7 +874,7 @@ Slicer::handleCall(
            funlink = e;
         }
     }
-    
+
     if(followCall(p, callee, cur)) {
        if (widen) {
           // Indirect call that they wanted us to follow, so widen.
@@ -871,11 +883,11 @@ Slicer::handleCall(
        }
 
        ParseAPI::Block * caller_block = cur.loc.block;
-       
+
        cur.loc.block = callee;
        cur.loc.func = getEntryFunc(callee);
        getInsns(cur.loc);
-       
+
        // Update the context of the slicing frame
        // and modify the abstract regions in its
        // active vector
@@ -915,9 +927,9 @@ Slicer::followCall(
     // FIXME quote:
    // A NULL callee indicates an indirect call.
    // TODO on that one...
-   
+
     ParseAPI::Function * callee = (target ? getEntryFunc(target) : NULL);
-    
+
     // cons up a call stack
     stack< pair<ParseAPI::Function *, int> > callStack;
     for(Context::reverse_iterator calls = cur.con.rbegin();
@@ -926,7 +938,7 @@ Slicer::followCall(
         if(NULL != calls->func) {
             callStack.push(make_pair(calls->func,calls->stackDepth));
         }
-    } 
+    }
     // Quote:
         // FIXME: assuming that this is not a PLT function, since I have no
         // idea at present.  -- BW, April 2010
@@ -941,8 +953,8 @@ Slicer::followCall(
     // one way or the other. This is something that could be done by
     // moving the handleCallDetails() call into this method and
     // modifying the nextCands vector here, as opposed to in
-    // handleCall(). 
-    // 
+    // handleCall().
+    //
     // This issue needs review by a person involved in slicer design.
     // FIXME
 
@@ -952,11 +964,11 @@ Slicer::followCall(
     for( ; ait != cur.active.end(); ++ait) {
         ret = ret || p.followCall(callee, callStack, (*ait).first);
     }
-    
+
     return ret;
 }
 
-void 
+void
 Slicer::shiftAllAbsRegions(
     SliceFrame & cur,
     long stack_depth,
@@ -991,7 +1003,7 @@ Slicer::shiftAllAbsRegions(
         e.insert(e.end(),(*ait).second.begin(),(*ait).second.end());
     }
     // and replace
-    cur.active = newMap;    
+    cur.active = newMap;
 }
 
 /*
@@ -1002,7 +1014,7 @@ bool
 Slicer::handleCallDetails(
     SliceFrame & cur,
     ParseAPI::Block * caller_block)
-{ 
+{
     ParseAPI::Function * caller = cur.con.front().func;
     ParseAPI::Function * callee = cur.loc.func;
 
@@ -1023,7 +1035,7 @@ Slicer::handleCallDetails(
  * Properly adjusts the location & context of the slice frame and the
  * AbsRegions of its active elements
  */
-bool 
+bool
 Slicer::handleReturn(
     Predicates & /* p */,
     SliceFrame & cur,
@@ -1039,7 +1051,7 @@ Slicer::handleReturn(
 
     // Find successor
     ParseAPI::Block * retBlock = NULL;
-    
+
     const Block::edgelist & targets = cur.loc.block->targets();
     Block::edgelist::const_iterator eit = targets.begin();
     for(; eit != targets.end(); ++eit) {
@@ -1111,10 +1123,10 @@ Slicer::handleDefault(
         getInsnsBackward(cur.loc);
 	// We only track control flow dependencies when the user wants to
 	if (p.searchForControlFlowDep() && EndsWithConditionalJump(e->src())) {
-	    vector<Element> newE;	 
-	    for (auto ait = cur.active.begin(); ait != cur.active.end(); ++ait) {	        
+	    vector<Element> newE;
+	    for (auto ait = cur.active.begin(); ait != cur.active.end(); ++ait) {
 	        newE.insert(newE.end(), ait->second.begin(), ait->second.end());
-	    }	
+	    }
 	    cur.active[AbsRegion(Absloc(MachRegister::getPC(cur.loc.block->obj()->cs()->getArch())))] = newE;
   	    slicing_printf("\tadding tracking ip for control flow information ");
 	}
@@ -1145,19 +1157,19 @@ Slicer::handleCallBackward(
 
     SliceFrame::ActiveMap::const_iterator ait = cand.active.begin();
     for( ; ait != cand.active.end(); ++ait) {
-        vector<ParseAPI::Function *> follow = 
+        vector<ParseAPI::Function *> follow =
             followCallBackward(p,cand,(*ait).first,e->src());
         for(unsigned j=0;j<follow.size();++j) {
             fmap[follow[j]].insert(*ait);
         }
     }
 
-    map<ParseAPI::Function *, SliceFrame::ActiveMap >::iterator mit = 
+    map<ParseAPI::Function *, SliceFrame::ActiveMap >::iterator mit =
         fmap.begin();
     for( ; mit != fmap.end(); ++mit) {
         ParseAPI::Function * f = (*mit).first;
         SliceFrame::ActiveMap & act = (*mit).second;
-    
+
         SliceFrame nf(cand.loc,cand.con);
         nf.active = act;
 
@@ -1179,7 +1191,7 @@ Slicer::handleCallBackward(
 
         getInsnsBackward(nf.loc);
         newCands.push_back(nf);
-    } 
+    }
     return true;
 }
 
@@ -1193,7 +1205,7 @@ Slicer::followCallBackward(
     AbsRegion const& reg,
     ParseAPI::Block * caller_block)
 {
-    stack< pair<ParseAPI::Function *, int> > callStack;  
+    stack< pair<ParseAPI::Function *, int> > callStack;
     for(Context::const_reverse_iterator calls = cand.con.rbegin();
         calls != cand.con.rend(); ++calls)
     {
@@ -1232,7 +1244,7 @@ Slicer::handleCallDetailsBackward(
 
     return true;
 }
-    
+
 bool
 Slicer::handleReturnBackward(
     Predicates & p,
@@ -1269,7 +1281,7 @@ Slicer::handleReturnBackward(
             return false;
         }
         return true;
-    } 
+    }
     return false;
 }
 
@@ -1285,13 +1297,13 @@ Slicer::handleReturnDetailsBackward(
     if(!getStackDepth(caller,caller_block, caller_block->end(),stack_depth)) {
         return false;
     }
-    
+
     pushContext(cur.con, callee, caller_block, stack_depth);
 
     // Transform the active abstract regions
     shiftAllAbsRegions(cur,stack_depth,caller);
 
-    return true; 
+    return true;
 }
 
 bool
@@ -1301,7 +1313,7 @@ Slicer::followReturn(
     ParseAPI::Block * source)
 {
     ParseAPI::Function * callee = (source ? getEntryFunc(source) : NULL);
-    
+
     stack< pair<ParseAPI::Function *, int> > callStack;
     for(Context::const_reverse_iterator calls = cand.con.rbegin();
         calls != cand.con.rend(); ++calls)
@@ -1319,12 +1331,12 @@ Slicer::followReturn(
     }
     return ret;
 }
-    
+
 
 
 /* ------------------------------------------- */
 
-Address SliceNode::addr() const { 
+Address SliceNode::addr() const {
   if (a_)
     return a_->addr();
   return 0;
@@ -1367,7 +1379,7 @@ ParseAPI::Function *getEntryFunc(ParseAPI::Block *block) {
   return block->obj()->findFuncByEntry(block->region(), block->start());
 }
 
-// Constructor. Takes the initial point we slice from. 
+// Constructor. Takes the initial point we slice from.
 
 // TODO: make this function-less interprocedural. That would throw the
 // stack analysis for a loop, but is generally doable...
@@ -1375,7 +1387,7 @@ Slicer::Slicer(Assignment::Ptr a,
                ParseAPI::Block *block,
                ParseAPI::Function *func,
 	       bool cache,
-	       bool stackAnalysis) : 
+	       bool stackAnalysis) :
   a_(a),
   b_(block),
   f_(func),
@@ -1384,6 +1396,8 @@ Slicer::Slicer(Assignment::Ptr a,
   converter(new AssignmentConverter(cache, stackAnalysis)),
   own_converter(true)
 {
+        slicing_printf("Construct With %s\n",
+            a_->format().c_str());
 }
 
 Slicer::Slicer(Assignment::Ptr a,
@@ -1428,14 +1442,17 @@ Slicer::~Slicer()
 Graph::Ptr Slicer::forwardSlice(Predicates &predicates) {
 
 	// delete cache state
-  unique_edges_.clear(); 
+  unique_edges_.clear();
 
   return sliceInternal(forward, predicates);
 }
 
 Graph::Ptr Slicer::backwardSlice(Predicates &predicates) {
   // delete cache state
-  unique_edges_.clear(); 
+  unique_edges_.clear();
+
+slicing_printf("Slice With %s\n",
+    a_->format().c_str());
 
   return sliceInternal(backward, predicates);
 }
@@ -1448,15 +1465,15 @@ bool Slicer::getStackDepth(ParseAPI::Function *func, ParseAPI::Block *block, Add
   // Ensure that analysis has been performed.
 
   assert(!heightSA.isTop());
-  
+
   if (heightSA.isBottom()) {
     return false;
   }
-  
+
   height = heightSA.height();
-  
+
   // The height will include the effects of the call
-  // Should check the region... 
+  // Should check the region...
 
   //slicing_cerr << "Get stack depth at " << std::hex << callAddr
   //<< std::dec << " " << (int) height << endl;
@@ -1472,10 +1489,10 @@ void Slicer::pushContext(Context &context,
   assert(context.front().block == NULL);
   context.front().block = callBlock;
 
-  slicing_cerr << "\t" 
+  slicing_cerr << "\t"
 	       << (context.front().func ? context.front().func->name() : "NULL")
-	       << ", " 
-	       << context.front().stackDepth 
+	       << ", "
+	       << context.front().stackDepth
 	       << endl;
 
     context.push_front(ContextElement(callee, stackDepth));
@@ -1498,7 +1515,7 @@ void Slicer::shiftAbsRegion(AbsRegion const&callerReg,
   }
   else {
     assert(callerReg.type() == Absloc::Unknown);
-    
+
     const Absloc &callerAloc = callerReg.absloc();
     if (callerAloc.type() != Absloc::Stack) {
       calleeReg = AbsRegion(callerAloc);
@@ -1511,7 +1528,7 @@ void Slicer::shiftAbsRegion(AbsRegion const&callerReg,
       }
       else {
         //slicing_cerr << "*** Shifting caller absloc " << callerAloc.off()
-        //<< " by stack depth " << stack_depth 
+        //<< " by stack depth " << stack_depth
         //<< " and setting to function " << callee->name() << endl;
 	calleeReg = AbsRegion(Absloc(callerAloc.off() - stack_depth,
 				     0, // Entry point has region 0 by definition
@@ -1526,10 +1543,10 @@ bool Slicer::kills(AbsRegion const&reg, Assignment::Ptr &assign) {
   // TBD: overlaps ins't quite the right thing here. "contained
   // by" would be better, but we need to get the AND/OR
   // of abslocs hammered out.
-  
+
   if (assign->out().type() != Absloc::Unknown) {
     // A region assignment can never kill
-    return false; 
+    return false;
   }
 
   if (assign->insn().getOperation().getID() == e_call && reg.absloc().type() == Absloc::Register) {
@@ -1552,7 +1569,7 @@ SliceNode::Ptr Slicer::createNode(Element const&elem) {
   created_[elem.ptr] = newNode;
 
   // mark this node as plausibly being entry/exit.
-  plausibleNodes.insert(newNode); 
+  plausibleNodes.insert(newNode);
   return newNode;
 }
 
@@ -1593,13 +1610,13 @@ void Slicer::getInsns(Location &loc) {
   if (iter == insnCache_->end()) {
     getInsnInstances(loc.block, (*insnCache_)[loc.block->start()]);
   }
-  
+
   loc.current = (*insnCache_)[loc.block->start()].begin();
   loc.end = (*insnCache_)[loc.block->start()].end();
 }
 
 void Slicer::getInsnsBackward(Location &loc) {
-    assert(loc.block->start() != (Address) -1); 
+    assert(loc.block->start() != (Address) -1);
     InsnCache::iterator iter = insnCache_->find(loc.block->start());
     if (iter == insnCache_->end()) {
       getInsnInstances(loc.block, (*insnCache_)[loc.block->start()]);
@@ -1616,7 +1633,7 @@ void Slicer::insertPair(Graph::Ptr ret,
 			Direction dir,
 			Element const&source,
 			Element const&target,
-			AbsRegion const& data) 
+			AbsRegion const& data)
 {
     SliceNode::Ptr s = createNode(source);
     SliceNode::Ptr t = createNode(target);
@@ -1630,7 +1647,7 @@ void Slicer::insertPair(Graph::Ptr ret,
 			Direction dir,
 			SliceNode::Ptr& s,
 			SliceNode::Ptr& t,
-			AbsRegion const& data) 
+			AbsRegion const& data)
 {
 
   EdgeTuple et(s,t,data);
@@ -1638,7 +1655,7 @@ void Slicer::insertPair(Graph::Ptr ret,
     unique_edges_[et] += 1;
     return;
   }
-  unique_edges_[et] = 1;  
+  unique_edges_[et] = 1;
 
   if (dir == forward) {
      SliceEdge::Ptr e = SliceEdge::create(s, t, data);
@@ -1651,7 +1668,7 @@ void Slicer::insertPair(Graph::Ptr ret,
      ret->insertPair(t, s, e);
 
      // this node is clearly not entry/exit.
-     plausibleNodes.erase(s); 
+     plausibleNodes.erase(s);
   }
 }
 
@@ -1694,7 +1711,7 @@ SliceNode::Ptr Slicer::widenNode() {
 }
 
 void Slicer::markAsEndNode(Graph::Ptr ret, Direction dir, Element &e) {
-  if (dir == forward) {    
+  if (dir == forward) {
     ret->insertExitNode(createNode(e));
   }
   else {
@@ -1709,8 +1726,8 @@ void Slicer::fastForward(Location &loc, Address
     }
 
     if (loc.current == loc.end || loc.addr() != addr) {
-        slicing_cerr << "Cannot find addr " << std::hex << addr 
-            << "in block [" << loc.block->start() << "," << loc.block->end() << ")" 
+        slicing_cerr << "Cannot find addr " << std::hex << addr
+            << "in block [" << loc.block->start() << "," << loc.block->end() << ")"
             << ", function " << loc.func->name() << " at " << loc.func->addr()
             << std::dec << endl;
     }
@@ -1722,8 +1739,8 @@ void Slicer::fastBackward(Location &loc, Address addr) {
     }
 
     if (loc.rcurrent == loc.rend || loc.addr() != addr) {
-        slicing_cerr << "Cannot find addr " << std::hex << addr 
-            << "in block [" << loc.block->start() << "," << loc.block->end() << ")" 
+        slicing_cerr << "Cannot find addr " << std::hex << addr
+            << "in block [" << loc.block->start() << "," << loc.block->end() << ")"
             << ", function " << loc.func->name() << " at " << loc.func->addr()
             << std::dec << endl;
     }
@@ -1731,19 +1748,19 @@ void Slicer::fastBackward(Location &loc, Address addr) {
 
 // removes unnecessary nodes from the slice graph. this is
 // currently mostly ia32/amd64 flags that are written but
-// never read. 
+// never read.
 void Slicer::cleanGraph(Graph::Ptr ret) {
   slicing_cerr << "Cleaning up the graph..." << endl;
   // Clean the graph up
-  
+
   // TODO: make this more efficient by backwards traversing.
   // For now, I know that we're generating graphs with tons of
   // unnecessary flag sets (which are immediately killed) and so
   // we don't have long non-exiting chains, we have "fuzz"
-  
+
   NodeIterator nbegin, nend;
   ret->allNodes(nbegin, nend);
-  
+
   std::list<Node::Ptr> toDelete;
   unsigned numNodes = 0;
   for (; nbegin != nend; ++nbegin) {
@@ -1763,13 +1780,13 @@ void Slicer::cleanGraph(Graph::Ptr ret) {
       }
 
       // mark non-flags nodes as exit nodes. these nodes are likely
-      // relevant to the slice and should not be deleted. only delete 
+      // relevant to the slice and should not be deleted. only delete
       // flag nodes. this should stop the over-deleting by this
-      // function, but this is a fairly ugly way of doing it. 
+      // function, but this is a fairly ugly way of doing it.
       const Absloc& abs = foozle->a_->out().absloc();
-      if (abs.type() == Absloc::Register && 
-                        (abs.reg().getArchitecture() == Arch_x86 
-                         || abs.reg().getArchitecture() == Arch_x86_64) && 
+      if (abs.type() == Absloc::Register &&
+                        (abs.reg().getArchitecture() == Arch_x86
+                         || abs.reg().getArchitecture() == Arch_x86_64) &&
                         (abs.reg().getBaseRegister() & x86::FLAG) == x86::FLAG) {
           slicing_cerr << "\t deleting" << endl;
           toDelete.push_back(*nbegin);
@@ -1786,9 +1803,9 @@ void Slicer::cleanGraph(Graph::Ptr ret) {
 }
 
 // promotes nodes in the slice graph to termination nodes.
-// essentially, the slicer maintains a set of nodes that 
+// essentially, the slicer maintains a set of nodes that
 // may be entry/exit nodes for the backwards/fowards case.
-// this function removes the nodes from the set, and 
+// this function removes the nodes from the set, and
 // marks them in the graph as true entry/exit nodes.
 // in the forward case, the entry node is a single node,
 // the assignment from which the slice began. in the backward
@@ -1799,7 +1816,7 @@ void Slicer::cleanGraph(Graph::Ptr ret) {
 // instructions where one operand is a literal.
 void Slicer::promotePlausibleNodes(GraphPtr g, Direction d) {
     // note: it would be better to reuse some other
-    // functions here, but none of them quite use 
+    // functions here, but none of them quite use
     // the interface we need here.
     if (d == forward) {
         for (auto first = plausibleNodes.begin(), last = plausibleNodes.end();
@@ -1847,7 +1864,7 @@ void Slicer::constructInitialFrame(
     initFrame.con.push_front(ContextElement(f_));
     initFrame.loc = Location(f_,b_);
 
-    // increment iterators to initial instruction. 
+    // increment iterators to initial instruction.
     if(dir == forward) {
         initFrame.loc.fwd = true;
         getInsns(initFrame.loc);
@@ -1864,7 +1881,7 @@ void Slicer::constructInitialFrame(
     // by a different converter, and thus if the instruction is visited
     // more than once by the slicer, the assignment will be recreated
     // instead of coming out of cache. this results in duplicated graph
-    // nodes. 
+    // nodes.
     std::vector<Assignment::Ptr> assigns;
     convertInstruction(init_instruction, a_->addr(), f_, b_, assigns);
     for (auto first = assigns.begin(), last = assigns.end(); first != last; ++first) {
@@ -1897,7 +1914,7 @@ Slicer::DefCache::merge(Slicer::DefCache const& o)
 
 void
 Slicer::DefCache::replace(Slicer::DefCache const& o)
-{   
+{
     // XXX if o.defmap[region] is empty set, remove that entry
     map<AbsRegion, set<Def> >::const_iterator oit = o.defmap.begin();
     for( ; oit != o.defmap.end(); ++oit) {
@@ -1925,7 +1942,7 @@ Slicer::DefCache::print() const {
 
 // merges all single caches that have occured single addr in the
 // recursion into the appropriate unified caches.
-void Slicer::mergeRecursiveCaches(std::unordered_map<Address, DefCache>& single, 
+void Slicer::mergeRecursiveCaches(std::unordered_map<Address, DefCache>& single,
                                   std::unordered_map<Address, DefCache>& unified, Address) {
 
 

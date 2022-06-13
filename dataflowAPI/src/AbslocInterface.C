@@ -1,28 +1,28 @@
 /*
  * See the dyninst/COPYRIGHT file for copyright information.
- * 
+ *
  * We provide the Paradyn Tools (below described as "Paradyn")
  * on an AS IS basis, and do not warrant its validity or performance.
  * We reserve the right to update, modify, or discontinue this
  * software at any time.  We shall have no obligation to supply such
  * updates or modifications or any other form of support to you.
- * 
+ *
  * By your use of Paradyn, you understand and agree that we (or any
  * other person or entity with proprietary rights in Paradyn) are
  * under no obligation to provide either maintenance services,
  * update services, notices of latent defects, or correction of
  * defects for Paradyn.
- * 
+ *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
- * 
+ *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
@@ -67,9 +67,9 @@ void AbsRegionConverter::convertAll(InstructionAPI::Expression::Ptr expr,
        regions.push_back(convert(*i, addr, func, block));
     }
   }
-  
+
   // Otherwise just convert registers
-  
+
   std::set<InstructionAST::Ptr> used;
   expr->getUses(used);
   for (std::set<InstructionAST::Ptr>::const_iterator j = used.begin();
@@ -84,7 +84,7 @@ void AbsRegionConverter::convertAll(const InstructionAPI::Instruction &insn,
                                     ParseAPI::Block *block,
 				    std::vector<AbsRegion> &used,
 				    std::vector<AbsRegion> &defined) {
-                        
+
                         if (!usedCache(addr, func, used)) {
     std::set<RegisterAST::Ptr> regsRead;
     insn.getReadSet(regsRead);
@@ -107,7 +107,7 @@ void AbsRegionConverter::convertAll(const InstructionAPI::Instruction &insn,
             used.push_back(AbsRegionConverter::convert(*i));
         }
     }
-    
+
     if (insn.readsMemory()) {
       std::set<Expression::Ptr> memReads;
       insn.getMemoryReadOperands(memReads);
@@ -153,7 +153,7 @@ void AbsRegionConverter::convertAll(const InstructionAPI::Instruction &insn,
           new RegisterAST(MachRegister::getPC(Arch_x86)))));
       }
     }
-    
+
     if (insn.writesMemory()) {
       std::set<Expression::Ptr> memWrites;
       insn.getMemoryWriteOperands(memWrites);
@@ -179,7 +179,7 @@ AbsRegion AbsRegionConverter::convert(RegisterAST::Ptr reg) {
     return AbsRegion(Absloc(reg->getID()));
   } else {
     return AbsRegion(Absloc(reg->getID().getBaseRegister()));
-  }		   
+  }
 }
 
 AbsRegion AbsRegionConverter::convertPredicatedRegister(RegisterAST::Ptr r, RegisterAST::Ptr p, bool c) {
@@ -276,9 +276,9 @@ AbsRegion AbsRegionConverter::convert(Expression::Ptr exp,
 				      Address addr,
 				      ParseAPI::Function *func,
                                       ParseAPI::Block *block) {
-    // We want to simplify the expression as much as possible given 
+    // We want to simplify the expression as much as possible given
     // currently known state, and then quantify it as one of the following:
-    // 
+    //
     // Stack: a memory access based off the current frame pointer (FP) or
     //   stack pointer (SP). If we can determine an offset from the "top"
     //   of the stack we create a stack slot location. Otherwise we create
@@ -286,9 +286,9 @@ AbsRegion AbsRegionConverter::convert(Expression::Ptr exp,
     //
     // Heap: a memory access to a generic pointer.
     //
-    // Memory: a memory access to a known address. 
+    // Memory: a memory access to a known address.
     //
-    // TODO: aliasing relations. Aliasing SUCKS. 
+    // TODO: aliasing relations. Aliasing SUCKS.
 
     // Since we have an Expression as input, we don't have the dereference
     // operator.
@@ -312,7 +312,7 @@ AbsRegion AbsRegionConverter::convert(Expression::Ptr exp,
     long spHeight = 0;
     bool stackDefined = getCurrentStackHeight(func,
                                               block,
-                                              addr, 
+                                              addr,
                                               spHeight);
     long fpHeight = 0;
     bool frameDefined = getCurrentFrameHeight(func,
@@ -351,9 +351,9 @@ AbsRegion AbsRegionConverter::convert(Expression::Ptr exp,
                                  func));
       }
       else if (func->obj()->defensiveMode()) {
-          // SP could point to the heap, we make the worst-case 
+          // SP could point to the heap, we make the worst-case
           // assumption and will emulate this stack access
-          return AbsRegion(Absloc::Heap); 
+          return AbsRegion(Absloc::Heap);
       } else {
          return AbsRegion(Absloc::Stack);
       }
@@ -379,7 +379,7 @@ AbsRegion AbsRegionConverter::stack(Address addr,
     long spHeight = 0;
     bool stackExists = getCurrentStackHeight(func,
                                              block,
-					     addr, 
+					     addr,
 					     spHeight);
     if (!stackExists) {
       return AbsRegion(Absloc::Stack);
@@ -402,7 +402,7 @@ AbsRegion AbsRegionConverter::frame(Address addr,
     long fpHeight = 0;
     bool frameExists = getCurrentFrameHeight(func,
                                              block,
-					     addr, 
+					     addr,
 					     fpHeight);
 
     if (!frameExists) {
@@ -413,7 +413,7 @@ AbsRegion AbsRegionConverter::frame(Address addr,
       int word_size = func->isrc()->getAddressWidth();
       fpHeight -= word_size;
     }
-    
+
     return AbsRegion(Absloc(fpHeight,
                             0,
 			    func));
@@ -425,18 +425,18 @@ bool AbsRegionConverter::getCurrentStackHeight(ParseAPI::Function *func,
 					       long &height) {
   if (!stackAnalysisEnabled_) return false;
   StackAnalysis sA(func);
- 
+
   StackAnalysis::Height heightSA = sA.findSP(block, addr);
 
   // Ensure that analysis has been performed.
   assert(!heightSA.isTop());
-  
+
   if (heightSA.isBottom()) {
     return false;
   }
-  
+
   height = heightSA.height();
-  
+
   return true;
 }
 
@@ -444,20 +444,20 @@ bool AbsRegionConverter::getCurrentFrameHeight(ParseAPI::Function *func,
                                                ParseAPI::Block *block,
                                                Address addr,
 					       long &height) {
-  if (!stackAnalysisEnabled_) return false;					       
+  if (!stackAnalysisEnabled_) return false;
   StackAnalysis sA(func);
 
   StackAnalysis::Height heightSA = sA.find(block, addr, MachRegister::getFramePointer(func->isrc()->getArch()));;
 
   // Ensure that analysis has been performed.
-  assert(!heightSA.isTop());
-  
-  if (heightSA.isBottom()) {
+  //assert(!heightSA.isTop());
+
+  if (heightSA.isBottom() || heightSA.isTop()) {
     return false;
   }
-  
+
   height = heightSA.height();
-  
+
   return true;
 }
 
@@ -491,23 +491,23 @@ bool AbsRegionConverter::definedCache(Address addr,
 // Instruction.
 ///////////////////////////////////////////////////////
 
-void AssignmentConverter::convert(const Instruction &I, 
+void AssignmentConverter::convert(const Instruction &I,
                                   const Address &addr,
 				  ParseAPI::Function *func,
                                   ParseAPI::Block *block,
 				  std::vector<Assignment::Ptr> &assignments) {
   assignments.clear();
-  if (cache(func, addr, assignments)){ 
+  if (cache(func, addr, assignments)){
       return;
   }
 
   // Decompose the instruction into a set of abstract assignments.
-  // We don't have the Definition class concept yet, so we'll do the 
-  // hard work here. 
+  // We don't have the Definition class concept yet, so we'll do the
+  // hard work here.
   // Two phases:
   // 1) Special-cased for IA32 multiple definition instructions,
   //    based on the opcode of the instruction
-  // 2) Generic handling for things like flags and the PC. 
+  // 2) Generic handling for things like flags and the PC.
 
   // Non-PC handling section
   switch(I.getOperation().getID()) {
@@ -526,12 +526,12 @@ void AssignmentConverter::convert(const Instruction &I,
     //AbsRegion pc = AbsRegion(Absloc::makePC(func->isrc()->getArch()));
     AbsRegion pc = AbsRegion(Absloc(addr));
 
-    Assignment::Ptr lowpcA = Assignment::makeAssignment(I, 
+    Assignment::Ptr lowpcA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                                                          block,
 							 lowpc_dst);
-    Assignment::Ptr highpcA = Assignment::makeAssignment(I, 
+    Assignment::Ptr highpcA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                                                          block,
@@ -541,7 +541,7 @@ void AssignmentConverter::convert(const Instruction &I,
 
     assignments.push_back(lowpcA);
     assignments.push_back(highpcA);
-    // The slicing stops as long as we find at least one of the above assgignment 
+    // The slicing stops as long as we find at least one of the above assgignment
 
     // TODO:
     // DST_SGPR_PAIR = PC+4
@@ -551,7 +551,7 @@ void AssignmentConverter::convert(const Instruction &I,
     // TODO:
     // PC = SRC_SGPR_PAIR
     AbsRegion pc = AbsRegion(Absloc::makePC(func->isrc()->getArch()));
-    Assignment::Ptr pcA = Assignment::makeAssignment(I, 
+    Assignment::Ptr pcA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                                                          block,
@@ -578,10 +578,10 @@ void AssignmentConverter::convert(const Instruction &I,
     // TODO:DST_SGPR_PAIR= PC + 4
     // PC = SRC_SGPR_PAIR
 
-    //PC = OPR[0] 
+    //PC = OPR[0]
     //OPR[1] = OLD_PC + 4
-    // => 
-    //PC  =  OPR[0:1] 
+    // =>
+    //PC  =  OPR[0:1]
     //OPR[2:3] = OLD_PC + 4
     //
     std::vector<Operand> operands;
@@ -596,7 +596,7 @@ void AssignmentConverter::convert(const Instruction &I,
 
     AbsRegion pc = AbsRegion(Absloc::makePC(func->isrc()->getArch()));
 
-    Assignment::Ptr store_pc_lowA = Assignment::makeAssignment(I, 
+    Assignment::Ptr store_pc_lowA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
@@ -604,14 +604,14 @@ void AssignmentConverter::convert(const Instruction &I,
     store_pc_lowA->addInput(pc);
 
 
-    Assignment::Ptr store_pc_highA = Assignment::makeAssignment(I, 
+    Assignment::Ptr store_pc_highA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
 							 store_oper1);
     store_pc_highA->addInput(pc);
 
-    Assignment::Ptr pcA = Assignment::makeAssignment(I, 
+    Assignment::Ptr pcA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
@@ -627,7 +627,7 @@ void AssignmentConverter::convert(const Instruction &I,
 
     assignments.push_back(pcA);
     // while the below 2 assignments are also there, we comment it out for now TODO:
-    //assignments.push_back(store_pc_lowA); 
+    //assignments.push_back(store_pc_lowA);
     //assignments.push_back(store_pc_highA);
 
 
@@ -657,14 +657,14 @@ void AssignmentConverter::convert(const Instruction &I,
 
 
     AbsRegion scc = AbsRegion(MachRegister(amdgpu_vega::scc)) ;
-    Assignment::Ptr scc_assign = Assignment::makeAssignment(I, 
+    Assignment::Ptr scc_assign = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
 							 scc);
 
-   
-    Assignment::Ptr add_assign = Assignment::makeAssignment(I, 
+
+    Assignment::Ptr add_assign = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
@@ -672,7 +672,7 @@ void AssignmentConverter::convert(const Instruction &I,
 
     add_assign->addInput(src1);
     add_assign->addInput(src0);
-    
+
     scc_assign->addInput(src1);
     scc_assign->addInput(src0);
 
@@ -711,8 +711,8 @@ void AssignmentConverter::convert(const Instruction &I,
 
     AbsRegion scc = AbsRegion(MachRegister(amdgpu_vega::scc)) ;
 
-   
-    Assignment::Ptr add_assign = Assignment::makeAssignment(I, 
+
+    Assignment::Ptr add_assign = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                              block,
@@ -729,9 +729,9 @@ void AssignmentConverter::convert(const Instruction &I,
   }
 
   case e_push: {
-    // SP = SP - 4 
+    // SP = SP - 4
     // *SP = <register>
- 
+
     std::vector<Operand> operands;
     I.getOperands(operands);
 
@@ -741,7 +741,7 @@ void AssignmentConverter::convert(const Instruction &I,
     // The argument can be any of the following:
     // 1) a register (push eax);
     // 2) an immediate value (push $deadbeef)
-    // 3) a memory location. 
+    // 3) a memory location.
 
     std::vector<AbsRegion> oper0;
     aConverter.convertAll(operands[0].getValue(),
@@ -759,11 +759,11 @@ void AssignmentConverter::convert(const Instruction &I,
     std::vector<AbsRegion> pcRegion;
     pcRegion.push_back(Absloc::makePC(func->isrc()->getArch()));
     Absloc sp = Absloc::makeSP(func->isrc()->getArch());
-    
+
     handlePushEquivalent(I, addr, func, block, pcRegion, assignments);
 
     // Now for the PC definition
-    // Assume full intra-dependence of non-flag and non-pc registers. 
+    // Assume full intra-dependence of non-flag and non-pc registers.
     std::vector<AbsRegion> used;
     std::vector<AbsRegion> defined;
 
@@ -797,14 +797,14 @@ void AssignmentConverter::convert(const Instruction &I,
     // <reg> = *SP
     // SP = SP + 4/8
     // Amusingly... this doesn't have an intra-instruction dependence. It should to enforce
-    // the order that <reg> = *SP happens before SP = SP - 4, but since the input to both 
-    // uses of SP in this case are the, well, input values... no "sideways" edges. 
+    // the order that <reg> = *SP happens before SP = SP - 4, but since the input to both
+    // uses of SP in this case are the, well, input values... no "sideways" edges.
     // However, we still special-case it so that SP doesn't depend on the incoming stack value...
     // Also, we use the same logic for return, defining it as
     // PC = *SP
     // SP = SP + 4/8
 
-    // As with push, eSP shows up as operand 1. 
+    // As with push, eSP shows up as operand 1.
 
     std::vector<Operand> operands;
     I.getOperands(operands);
@@ -829,17 +829,17 @@ void AssignmentConverter::convert(const Instruction &I,
     // From a definition POV, we have the following:
     // SP = BP
     // BP = *SP
-        
+
     // BP    STACK[newSP]
     //  |    |
     //  v    v
     // SP -> BP
-        
-    // This is going to give the stack analysis fits... for now, I think it just reverts the
-    // stack depth to 0. 
 
-    // TODO FIXME update stack analysis to make this really work. 
-        
+    // This is going to give the stack analysis fits... for now, I think it just reverts the
+    // stack depth to 0.
+
+    // TODO FIXME update stack analysis to make this really work.
+
     AbsRegion sp(Absloc::makeSP(func->isrc()->getArch()));
     AbsRegion fp(Absloc::makeFP(func->isrc()->getArch()));
 
@@ -877,7 +877,7 @@ void AssignmentConverter::convert(const Instruction &I,
     // Like pop, except it's all implicit.
 
     AbsRegion pc = AbsRegion(Absloc::makePC(func->isrc()->getArch()));
-    Assignment::Ptr pcA = Assignment::makeAssignment(I, 
+    Assignment::Ptr pcA = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                                                          block,
@@ -913,7 +913,7 @@ void AssignmentConverter::convert(const Instruction &I,
                           func,
                           block,
                           oper0);
-    
+
     std::vector<AbsRegion> oper1;
     aConverter.convertAll(operands[1].getValue(),
                           addr,
@@ -925,7 +925,7 @@ void AssignmentConverter::convert(const Instruction &I,
     // cause either oper0 or oper1 to have multiple entries (the
     // remainder will be registers). So. Use everything from oper1
     // to define oper0[0], and vice versa.
-    
+
     Assignment::Ptr a = Assignment::makeAssignment(I, addr, func, block, oper0[0]);
     a->addInputs(oper1);
 
@@ -957,7 +957,7 @@ void AssignmentConverter::convert(const Instruction &I,
 
     Expression::Ptr tmp = *(writes.begin());
     AbsRegion effAddr = aConverter.convert(tmp,
-					   addr, 
+					   addr,
 					   func,
                                            block);
     std::vector<AbsRegion> regions;
@@ -967,13 +967,13 @@ void AssignmentConverter::convert(const Instruction &I,
     aConverter.convertAll(operands[2].getValue(), addr, func, block, regions);
     AbsRegion RA = regions[0];
 
-    Assignment::Ptr mem = Assignment::makeAssignment(I, 
+    Assignment::Ptr mem = Assignment::makeAssignment(I,
 							 addr,
 							 func,
                                                          block,
 							 effAddr);
     mem->addInput(RS);
-    
+
     Assignment::Ptr ra = Assignment::makeAssignment(I,
 							addr,
 							func,
@@ -983,9 +983,9 @@ void AssignmentConverter::convert(const Instruction &I,
     assignments.push_back(mem);
     assignments.push_back(ra);
     break;
-  }      
+  }
   default:
-    // Assume full intra-dependence of non-flag and non-pc registers. 
+    // Assume full intra-dependence of non-flag and non-pc registers.
     std::vector<AbsRegion> used;
     std::vector<AbsRegion> defined;
 
@@ -995,11 +995,11 @@ void AssignmentConverter::convert(const Instruction &I,
                           block,
 			  used,
 			  defined);
-    // PC should be regarded as a constant		
+    // PC should be regarded as a constant
     AbsRegion pc(Absloc::makePC(func->isrc()->getArch()));
     for (auto uit = used.begin(); uit != used.end(); ++uit)
         if (*uit == pc) {
-	    used.erase(uit);			 
+	    used.erase(uit);
 	    break;
 	}
     for (std::vector<AbsRegion>::const_iterator i = defined.begin();
@@ -1010,19 +1010,19 @@ void AssignmentConverter::convert(const Instruction &I,
     }
     break;
   }
-    
+
 
   // Now for flags...
-  // According to Matt, the easiest way to represent dependencies for flags on 
-  // IA-32/AMD-64 is to have them depend on the inputs to the instruction and 
+  // According to Matt, the easiest way to represent dependencies for flags on
+  // IA-32/AMD-64 is to have them depend on the inputs to the instruction and
   // not the outputs of the instruction; therefore, there's no intra-instruction
-  // dependence. 
+  // dependence.
 
   // PC-handling section
   // Most instructions use the PC to set the PC. This includes calls, relative branches,
   // and the like. So we're basically looking for indirect branches or absolute branches.
   // (are there absolutes on IA-32?).
-  // Also, conditional branches and the flag registers they use. 
+  // Also, conditional branches and the flag registers they use.
 
   if (cacheEnabled_) {
     cache_[func][addr] = assignments;
@@ -1038,7 +1038,7 @@ void AssignmentConverter::handlePushEquivalent(const Instruction I,
 					       std::vector<Assignment::Ptr> &assignments) {
   // The handled-in operands are used to define *SP
   // And then we update SP
-  
+
    AbsRegion stackTop = aConverter.stack(addr, func, block, true);
   AbsRegion sp(Absloc::makeSP(func->isrc()->getArch()));
 
@@ -1068,7 +1068,7 @@ void AssignmentConverter::handlePopEquivalent(const Instruction I,
 
    AbsRegion stackTop = aConverter.stack(addr, func, block, false);
   AbsRegion sp(Absloc::makeSP(func->isrc()->getArch()));
-  
+
   Assignment::Ptr spA = Assignment::makeAssignment(I,
 						       addr,
 						       func,
@@ -1089,8 +1089,8 @@ void AssignmentConverter::handlePopEquivalent(const Instruction I,
   assignments.push_back(spB);
 }
 
-bool AssignmentConverter::cache(ParseAPI::Function *func, 
-				Address addr, 
+bool AssignmentConverter::cache(ParseAPI::Function *func,
+				Address addr,
 				std::vector<Assignment::Ptr> &assignments) {
   if (!cacheEnabled_) {
     return false;
