@@ -392,6 +392,8 @@ bool Slicer::updateAndLink(
 
     killed.resize(cand.active.size(),false);
 
+    slicing_printf("\t Cand Size %d\n", cand.active.size());
+
     if(dir == forward)
         convertInstruction(cand.loc.current->first,cand.addr(),cand.loc.func, cand.loc.block, assns);
     else
@@ -403,9 +405,10 @@ bool Slicer::updateAndLink(
         unsigned j=0;
         for( ; ait != cand.active.end(); ++ait,++j) {
             if (findMatch(g,dir,cand,(*ait).first,assns[i],matches, cache)) { // links
-	        if (!p.addNodeCallback(assns[i], visitedEdges)) return false;
-	    }
-	    killed[j] = killed[j] || kills((*ait).first,assns[i]);
+	            if (!p.addNodeCallback(assns[i], visitedEdges))
+                    return false;
+	        }
+            killed[j] = killed[j] || kills((*ait).first,assns[i]);
             change = change || killed[j];
         }
         // Record the *potential* of this instruction to interact
@@ -413,7 +416,10 @@ bool Slicer::updateAndLink(
         cachePotential(dir,assns[i],cache);
     }
 
+    slicing_printf("\t Cand Size After %d %d %d\n", cand.active.size(), change, matches.empty());
+
     if(!change && matches.empty()) {// no change -- nothing killed, nothing added
+        slicing_printf("\t No change\n");
         return true;
     }
 
@@ -422,6 +428,7 @@ bool Slicer::updateAndLink(
     unsigned j=0;
     for( ; ait != cand.active.end(); ) {
         if(killed[j]) {
+            slicing_printf("\t\t Killed %d\n", j);
             // remove killed nodes from plausible exit set.
             // this need only be done in the forward case,
             // because backward slice semantics properly
@@ -788,6 +795,8 @@ Slicer::getPredecessors(
     if(prev != cand.loc.rend) {
       SliceFrame *nf = NULL;
 
+      slicing_printf("\t\t Intrablock\n");
+
       //Slightly more complicated than the forward case; check
       //a predicate for each active abstract region to see whether
       //we should continue
@@ -833,13 +842,17 @@ Slicer::getPredecessors(
 
     Block::edgelist sources;
     cand.loc.block->copy_sources(sources);
+    slicing_printf("\t\t Interblock %llx %d\n", cand.loc.block->start(), sources.size());
     map< pair<Address, int> , ParseAPI::Edge* > sources_edges;
     for (auto eit = sources.begin(); eit != sources.end(); ++eit) {
+        slicing_printf("\t\t\t edge\n");
         sources_edges.insert(make_pair( make_pair( (*eit)->src()->start(), (int)(*eit)->type() ), *eit));
     }
     for (auto eit = sources_edges.begin(); eit != sources_edges.end(); eit++) {
+        slicing_printf("\t\t\t Handle edge %llx -> %llx\n", eit->second->src()->start(), eit->second->trg()->start());
         handlePredecessorEdge(eit->second, p, cand, newCands, err, nf);
     }
+    slicing_printf("\t\t Interblock END %d\n", err);
     return !err;
 }
 
@@ -1549,13 +1562,15 @@ bool Slicer::kills(AbsRegion const&reg, Assignment::Ptr &assign) {
     return false;
   }
 
-  if (assign->insn().getOperation().getID() == e_call && reg.absloc().type() == Absloc::Register) {
-      MachRegister r = reg.absloc().reg();
-      ABI* abi = ABI::getABI(b_->obj()->cs()->getAddressWidth());
-      int index = abi->getIndex(r);
-      if (index >= 0)
-          if (abi->getCallWrittenRegisters()[abi->getIndex(r)] && r != x86_64::r11) return true;
-  }
+  //if (assign->insn().getOperation().getID() == e_call && reg.absloc().type() == Absloc::Register) {
+      //MachRegister r = reg.absloc().reg();
+      //ABI* abi = ABI::getABI(b_->obj()->cs()->getAddressWidth());
+      //int index = abi->getIndex(r);
+      //slicing_printf("\t call kill? %d %d // %d %d %d\n", r, x86_64::rdi, index, abi->getCallWrittenRegisters()[abi->getIndex(r)], r != x86_64::r11);
+      //if (index >= 0)
+          //if (abi->getCallWrittenRegisters()[abi->getIndex(r)] && r != x86_64::r11) return true;
+  //}
+  slicing_printf("\t kill? %d %d\n", reg.contains(assign->out()), assign->out().contains(reg));
   return reg.contains(assign->out()) || assign->out().contains(reg);
 }
 
